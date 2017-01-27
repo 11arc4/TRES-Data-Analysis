@@ -90,7 +90,7 @@ BGBoxes <-unname(unlist(Boxes["Bridgets/Golf Course Box", ])) + unname(unlist(Te
 
 
 Terr_rows <- which(grepl("Territory", row.names(BoxesAndTerritories)))
-Terr<- BoxesAndTerritories[Terr_rows,]
+Terr <- BoxesAndTerritories[Terr_rows,]
 YearlyTerr <- c()
 
 for (i in 1:length(Terr)){
@@ -222,5 +222,6 @@ baseTerrGraph +
 baseTerrGraph +
   geom_point(aes(y=TerrOccBG, color="TerrOccBG"))+
   stat_smooth(aes(y=TerrOccBG, color="TerrOccBG"))
+
 #That one is fascinating. It's soooo different from the BG box occupancy, which
 #parallels the total occupancy so closely
