@@ -71,12 +71,22 @@ BoxesAndTerritories<- subset(BoxesAndTerritories, select= -c(Year))
 BoxesAndTerritories[is.na(BoxesAndTerritories)]<-0
 
 Box_rows<- which(grepl("Box", row.names(BoxesAndTerritories)))
-
 Boxes <- BoxesAndTerritories[Box_rows,]
 YearlyBoxes <-c()
 for (i in 1:length(Boxes)){
   YearlyBoxes[i] <- sum(Boxes[, i], na.rm=TRUE)
 }
+HUBoxes <- unname(unlist(Boxes["Hughson's Box", ]))
+NBBoxes <- unname(unlist(Boxes["Newbarn Box", ]))
+NESBoxes <- unname(unlist(Boxes["North East Sanctuary Box", ]))
+SPBoxes <- unname(unlist(Boxes["Sandpit Box", ]))
+SRBBoxes <- unname(unlist(Boxes["SRB Box", ]))
+#These territories include BG, GC, and Seans Grid boxes!  SG doesn't have it's
+#own territories because they were just added in to make BG territories have 2
+#boxes. IE their territories are already counted if we look at just BG boxes
+BGBoxes <-unname(unlist(Boxes["Bridgets/Golf Course Box", ])) + unname(unlist(Terr["Seans Box", ]))
+
+
 
 
 Terr_rows <- which(grepl("Territory", row.names(BoxesAndTerritories)))
