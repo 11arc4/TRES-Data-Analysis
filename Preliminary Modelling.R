@@ -47,7 +47,7 @@ ggplot(AllNestdata, aes(x=M.Day.measured, y= M.Mass..g.))+
 #Subset the data prior to doiing the female mass analysis
 FData <- AllNestdata[which(!is.na(AllNestdata$F.Mass..g.) & !is.na(AllNestdata$F.Day.measured) & !is.na(AllNestdata$Hatch.Date)), ]
 FData$Diff <- FData$J.F.Day.measured - FData$Hatch.Date
-Fmass_mod<- lm(as.numeric(FData$F.Mass..g.)~FData$Year* FData$Diff *FData$Clutch.Size)
+Fmass_mod<- glm(as.numeric(FData$F.Mass..g.)~FData$Year* FData$Diff *FData$Clutch.Size)
 summary(aov(Fmass_mod))
 summary(Fmass_mod)
 plot(Fmass_mod) 
@@ -59,6 +59,21 @@ plot(FData$Year, resid(Fmass_mod))
 plot(FData$Diff, resid(Fmass_mod))
 plot(FData$Clutch.Size, resid(Fmass_mod)) #This might not be the best.....
 
+
+#Female mass analysis Removing Leverage Points
+FNLData <- FData[-c(234, 527, 1094, 1114, 1128, 1389, 1430, 1558 ),]
+FNLmass_mod<- glm(as.numeric(FNLData$F.Mass..g.)~FNLData$Year* FNLData$Diff *FNLData$Clutch.Size)
+summary(aov(FNLmass_mod))
+summary(FNLmass_mod)
+plot(FNLmass_mod) #removing those points did solve the leverage issue!
+shapiro.test(resid(FNLmass_mod)) 
+#Says that my residuals aren't normal
+hist(resid(FNLmass_mod)) #This histogram looks good and normal to me!
+plot(FNLData$Year, resid(FNLmass_mod))
+plot(FNLData$Diff, resid(FNLmass_mod))
+plot(FNLData$Clutch.Size, resid(FNLmass_mod)) #This might not be the best still.....
+
+#Overall it looks like removing the leveraging points makes very little difference
 
 
 
