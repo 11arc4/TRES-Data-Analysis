@@ -12,10 +12,6 @@ plot (growthrate_mass~ year, data=gdata)
 #Here are a couple of points that just really don't make sense, so will need to
 #be excluded--I bet they're calculating with the wrong numbers or something
 
-gdata[which(gdata$growthrate_mass< (-5)), ]
-gdata[which(gdata$growthrate_mass> (10)), ]
-
-
 #removed the wonky points
 gdata2 <- gdata [which(gdata$growthrate_mass> (-5) & gdata$growthrate_mass< (10)), ]
 
@@ -47,8 +43,8 @@ plot(resid(mod)~gmdata$hatchsize)
 
 #Model Fledge success based on growth rate averages per nest 
 #Need to use averages per nest because otherwise it will be unclear which individuals fledges and which died
-FGrData <- summarise(group_by(.data=gmdata, nest), mean(year), mean(growthrate_mass, na.rm = TRUE), mean(hatchdate), mean(hatchsize), mean(fledgesize))
-
+FGrData <- summarise(group_by(.data=gmdata, nest), year[1], mean(growthrate_mass, na.rm = TRUE), hatchdate[1], hatchsize[1], fledgesize[1])
+FGrData <- FGrData[which(FGrData$reasonforfailure != "PREDATION" & FGrData$reasonforfailure !="RESEARCHER"), ]
 
 
 
@@ -66,5 +62,7 @@ shapiro.test(resid(fmod)) #not normal
 
 fglmod <- glm(fledgesize ~ year* growthrate * hatchdate * hatchsize, data= FGrData, family=poisson(link="log"))
 summary(aov(fglmod))
-plot(fglmod) #This actually fits worse (I think)
+plot(fglmod) 
+hist (FGrData$fledgesize)
+
 
