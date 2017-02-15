@@ -81,16 +81,19 @@ NBBoxes <- unname(unlist(Boxes["Newbarn Box", ]))
 NESBoxes <- unname(unlist(Boxes["North East Sanctuary Box", ]))
 SPBoxes <- unname(unlist(Boxes["Sandpit Box", ]))
 SRBBoxes <- unname(unlist(Boxes["SRB Box", ]))
-#These territories include BG, GC, and Seans Grid boxes!  SG doesn't have it's
-#own territories because they were just added in to make BG territories have 2
-#boxes. IE their territories are already counted if we look at just BG boxes
-BGBoxes <-unname(unlist(Boxes["Bridgets/Golf Course Box", ])) + unname(unlist(Terr["Seans Box", ]))
+
 
 
 
 
 Terr_rows <- which(grepl("Territory", row.names(BoxesAndTerritories)))
 Terr <- BoxesAndTerritories[Terr_rows,]
+#These territories include BG, GC, and Seans Grid boxes!  SG doesn't have it's
+#own territories because they were just added in to make BG territories have 2
+#boxes. IE their territories are already counted if we look at just BG boxes
+BGBoxes <-unname( unlist(Boxes["Bridgets/Golf Course Box", ])) +  unname(unlist(Boxes["Seans Box", ]) )
+
+
 YearlyTerr <- c()
 
 for (i in 1:length(Terr)){
@@ -157,7 +160,7 @@ baseBoxGraph <- ggplot(BoxOccupancy, aes(x=Year, y= value, color=variable))+
 #Add on Hughson's
 baseBoxGraph +
   geom_point(aes(Year, y=BoxOccHU, color="BoxOccHU"))+
-  stat_smooth(aes(Year, y=BoxOccHU, color="BoxOccHU"))
+  stat_smooth(aes(Year, y=BoxOccHU, color="BoxOccHU"), se=FALSE)
 
 #Add on Newbarn
 
@@ -175,7 +178,7 @@ baseBoxGraph+
   geom_point(aes(Year, y=BoxOccSP, color= "BoxOccSP"))+
   stat_smooth(aes(Year, y=BoxOccSP, color= "BoxOccSP"))
 
-#Add on SP
+#Add on SRB
 baseBoxGraph+
   geom_point(aes(Year, y=BoxOccSRB, color= "BoxOccSRB"))+
   stat_smooth(aes(Year, y=BoxOccSRB, color= "BoxOccSRB"))
@@ -183,6 +186,27 @@ baseBoxGraph+
 baseBoxGraph+
   geom_point(aes(Year, y=BoxOccBG, color= "BoxOccBG"))+
   stat_smooth(aes(Year, y=BoxOccBG, color= "BoxOccBG"))
+
+
+
+#Every grid
+allgridBoxGraph <- baseBoxGraph +
+  stat_smooth(aes(Year, y=BoxOccHU, color="BoxOccHU"), se=FALSE)+
+  stat_smooth(aes(Year, y=BoxOccNB, color= "BoxOccNB"), se=FALSE)+
+  stat_smooth(aes(Year, y=BoxOccNES, color= "BoxOccNES"), se=FALSE)+
+  stat_smooth(aes(Year, y=BoxOccSP, color= "BoxOccSP"), se=FALSE)+
+  stat_smooth(aes(Year, y=BoxOccSRB, color= "BoxOccSRB"), se=FALSE)+
+  stat_smooth(aes(Year, y=BoxOccBG, color= "BoxOccBG"), se=FALSE)+
+  scale_color_discrete(name="Grid",
+                      breaks=c("BoxOccHU", "BoxOccNB", "BoxOccNES", "BoxOccSP", "BoxOccSRB","BoxOccBG",  "BoxOccTotal"),
+                      labels=c("Hughson's", "New Barn", "North-East Sanctuary", "Sandpit", "SRB", "Bridget's", "All grids"))
+
+
+
+
+
+
+
 
 
 #Let's make that basic Terretory boxplot
@@ -225,3 +249,16 @@ baseTerrGraph +
 
 #That one is fascinating. It's soooo different from the BG box occupancy, which
 #parallels the total occupancy so closely
+
+allgridTerrGraph <- baseTerrGraph +
+  stat_smooth(aes(Year, y=TerrOccHU, color="TerrOccHU"), se=FALSE)+
+  stat_smooth(aes(Year, y=TerrOccNB, color= "TerrOccNB"), se=FALSE)+
+  stat_smooth(aes(Year, y=TerrOccNES, color= "TerrOccNES"), se=FALSE)+
+  stat_smooth(aes(Year, y=TerrOccSP, color= "TerrOccSP"), se=FALSE)+
+  stat_smooth(aes(Year, y=TerrOccSRB, color= "TerrOccSRB"), se=FALSE)+
+  stat_smooth(aes(Year, y=TerrOccBG, color= "TerrOccBG"), se=FALSE)+
+  scale_color_discrete(name="Grid",
+                       breaks=c("TerrOccHU", "TerrOccNB", "TerrOccNES", "TerrOccSP", "TerrOccSRB", "TerrOccBG", "TerrOccTotal"),
+                       labels=c("Hughson's", "New Barn", "North-East Sanctuary", "Sandpit", "SRB","Bridgets" ,"All grids"))
+
+
