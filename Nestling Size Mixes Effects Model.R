@@ -1,6 +1,7 @@
 #Modeling Chick Mass
 library(lme4)
 library(glmmADMB)
+library(ggplot2)
 inputdir <- "~/Masters Thesis Project/Tree Swallow Data/Amelia TRES data 1975-2016/Extracted Data for Analysis"
 ndata <- read.csv(paste(inputdir, "Nestling Measurements for Analysis.csv", sep="/"), as.is=TRUE, na.strings= c("", "NA"))
 
@@ -80,7 +81,4 @@ plot(resid(mod3, type="pearson")~mass, data=datsc)
 #never is actually greater than 30 anyway and if it is it's probably a clerical
 #mistake
 #If I re-run the code without those points it looks fine!!!!
-
-
-
 
