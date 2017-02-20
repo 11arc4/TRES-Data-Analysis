@@ -151,7 +151,7 @@ BoxOccupancy$TerrOccBG<- BoxOccupancy$BGBirdTotal/(2*BoxOccupancy$BGTerritories)
 
 #Basic graph of box occupancy based on 
 baseBoxGraph <- ggplot(BoxOccupancy, aes(x=Year, y= value, color=variable))+
-  geom_point(aes(Year, y=BoxOccTotal, color="BoxOccTotal"))+
+  geom_point(aes(Year, y=BoxOccTotal, color="BoxOccTotal"), show.legend = F)+
   stat_smooth(aes(Year, y=BoxOccTotal, color="BoxOccTotal"))+
   xlab ("Year") +
   ylab ("Box Occupancy") +
@@ -211,7 +211,7 @@ allgridBoxGraph <- baseBoxGraph +
 
 #Let's make that basic Terretory boxplot
 baseTerrGraph <- ggplot(BoxOccupancy, aes(x=Year, y=value, color=variable))+
-  geom_point(aes(y=TerrOccTotal, color="TerrOccTotal"))+
+  geom_point(aes(y=TerrOccTotal, color="TerrOccTotal"), show.legend = F)+
   stat_smooth(aes(y=TerrOccTotal, color="TerrOccTotal"))+
   xlab ("Year") +
   ylab ("Territory Occupancy") +
@@ -250,8 +250,8 @@ baseTerrGraph +
 #That one is fascinating. It's soooo different from the BG box occupancy, which
 #parallels the total occupancy so closely
 
-allgridTerrGraph <- baseTerrGraph +
-  stat_smooth(aes(Year, y=TerrOccHU, color="TerrOccHU"), se=FALSE)+
+allgridTerrGraph <- 
+  baseTerrGraph +stat_smooth(aes(Year, y=TerrOccHU, color="TerrOccHU"), se=FALSE)+
   stat_smooth(aes(Year, y=TerrOccNB, color= "TerrOccNB"), se=FALSE)+
   stat_smooth(aes(Year, y=TerrOccNES, color= "TerrOccNES"), se=FALSE)+
   stat_smooth(aes(Year, y=TerrOccSP, color= "TerrOccSP"), se=FALSE)+

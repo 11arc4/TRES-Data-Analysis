@@ -67,7 +67,7 @@ plot(FNLData$Clutch.Size, resid(FNLmass_mod)) #This might not be the best still.
 
 #Overall it looks like removing the leveraging points makes very little difference
 
-
+FNLmass_mod<- glm(as.numeric(FNLData$F.Mass..g.)~FNLData$Year* FNLData$Diff *FNLData$Clutch.Size, na.action = "na.omit")
 
 MData <- AllNestdata[which(!is.na(AllNestdata$M.Mass..g.) & 
                              !is.na(AllNestdata$M.Day.measured) & 
@@ -82,7 +82,22 @@ shapiro.test(resid(Mmass_mod)) #Says that my residuals aren't n rmal! Weird beca
 hist(resid(Mmass_mod)) #This histogram looks good!
 plot(MData$Year, resid(Mmass_mod))
 plot(MData$Diff, resid(Mmass_mod)) 
-plot(MData$Clutch.Size, resid(Mmass_mod)) 
+plot(MData$Clutch.Size, resid(Mmass_mod)) #variance isn't really super equal
 #Maybe not as good as before....
 
 
+#let's just remove the leverageing points. It's a preliminary analysis for my committee meeting so it'll be ok
+MNLData <- MData[-c(144, 313, 545, 592, 630  ),]
+MNLmass_mod<- lm(MNLData$M.Mass..g. ~ MNLData$Year * MNLData$Diff * MNLData$Clutch.Size)
+summary(aov(Mmass_mod))
+summary(Mmass_mod)
+
+
+ggplot(data=MNLData, aes(x=Year, y=M.Mass..g.))+
+  geom_jitter(alpha=.5, aes(color=as.factor(Clutch.Size)))+
+  geom_smooth(method=lm)+
+  xlab("Year")+
+  ylab("Male mass (g)")+
+  theme_classic()+
+  scale_color_discrete(name="Clutch size")
+                    

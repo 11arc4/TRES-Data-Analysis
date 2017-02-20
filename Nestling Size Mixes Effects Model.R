@@ -1,7 +1,8 @@
 #Modeling Chick Mass
 library(lme4)
-library(glmmADMB)
 library(ggplot2)
+library(ggthemes)
+
 inputdir <- "~/Masters Thesis Project/Tree Swallow Data/Amelia TRES data 1975-2016/Extracted Data for Analysis"
 ndata <- read.csv(paste(inputdir, "Nestling Measurements for Analysis.csv", sep="/"), as.is=TRUE, na.strings= c("", "NA"))
 
@@ -82,3 +83,27 @@ plot(resid(mod3, type="pearson")~mass, data=datsc)
 #mistake
 #If I re-run the code without those points it looks fine!!!!
 
+
+
+
+#Make a plot to show the committee members this result
+library(ggplot2)
+mod <- lm( mass ~ age, data= ndata2)
+ggplot(data=ndata2, aes(x=year, y= resid(mod, type="pearson")))+
+  geom_jitter(alpha=0.05)+
+  geom_smooth(method=lm)
+
+ggplot(data=ndata2, aes(x=year, y= mass))+
+  geom_jitter(alpha=0.05)+
+  facet_grid(~age)
+
+
+#I will use this plot instead--it's kind of cheating but it best illustrates the yearly decline 
+ggplot(data=ndata2[which(ndata2$age==12),], aes(x=year, y= mass))+
+  geom_jitter(alpha=0.1)+ 
+  geom_smooth(method=lm)+
+  ylab("Nestling mass at day 12 (g)")+
+  xlab("Year")+ 
+  theme_classic()
+
+  
