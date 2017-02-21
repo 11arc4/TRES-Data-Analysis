@@ -106,4 +106,33 @@ ggplot(data=ndata2[which(ndata2$age==12),], aes(x=year, y= mass))+
   xlab("Year")+ 
   theme_classic()
 
-  
+#FOr Committee meeting presentation
+ggplot(data=ndata2[which(ndata2$age==12),], aes(x=year, y= mass))+
+  geom_jitter(alpha=0.1)+ 
+  geom_smooth(method=lm)+
+  ylab("Nestling mass \n at day 12 (g)")+
+  xlab("Year")+ 
+  theme_classic() +
+  theme(text = element_text(size=18), axis.title.y = element_text(angle=0, vjust=0.5))
+
+
+
+#What if I rescaled year by setting 1994 to 0 instead of fully rescaling everything
+scdata <- ndata2
+scdata$year<- scdata$year-1974
+mod4 <- lmer( mass ~ age * year + (1|nestID) + (1|nestlingID), data=scdata) 
+summary(mod4)
+Betas <- fixef(mod4)
+SE <- sqrt(diag(vcov(mod4)))
+pval <- 2*pnorm(-abs(Betas/SE))
+output <- cbind (Betas, SE, pval)
+print (output, digits=3)  #This shows that everythign is significant (like super significant)
+
+plot(mod4)
+hist(resid(mod4, type="pearson"))
+shapiro.test(resid(mod4, type="pearson")) #n =16078 so shapiro test fails and won't calculate with my data
+plot(resid(mod4, type="pearson")~age, data=datsc)
+plot(resid(mod4, type="pearson")~year, data=datsc)
+plot(resid(mod4, type="pearson")~mass, data=datsc)
+
+#Not bad and I think this is much more interpretable than previous stuff. 
