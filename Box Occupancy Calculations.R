@@ -264,6 +264,7 @@ allgridTerrGraph <- baseTerrGraph +
                        labels=c("Hughson's", "New Barn", "North-East Sanctuary", "Sandpit", "SRB","Bridgets" ,"All grids"))
 
 
+
 PresentationBoxOcc 
 ggplot(BoxOccupancy, aes(x=Year, y= value), show.legend=F)+
   geom_point(aes(Year, y=BoxOccTotal, color="BoxOccTotal"), show.legend = F)+
