@@ -219,6 +219,16 @@ ggplot(data=MData3, aes(x=Year+1971, y=M.Mass..g.))+
   theme_classic()+
   theme(text = element_text(size=20))
 
+#Proposal Plot
+ggplot(data=MData3, aes(x=Year+1971, y=M.Mass..g.))+
+  geom_jitter(alpha=.5)+
+  geom_smooth(method=lm)+
+  xlab ("Year") +
+  ylab ("Male mass (g)") +
+  ylim(14, 29)+
+  xlim(1983, 2016)+
+  theme_classic()+
+  theme(text = element_text(size=15))
 
 
 
@@ -230,6 +240,7 @@ summary(Fmass_mod3)
 Anova(Fmass_mod3)
 summary(aov(Fmass_mod3))
 
+#Committee meeting presentation female plot
 FemaleMassPlot <- 
   ggplot(data=FData3, aes(x=Year+1974, y=F.Mass..g.))+
   geom_jitter(alpha=0.5)+
@@ -240,4 +251,14 @@ FemaleMassPlot <-
   xlim(1983, 2016)+
   theme_classic()+
   theme(text = element_text(size=20))
+
+ggplot(data=FData3, aes(x=Year+1974, y=F.Mass..g.))+
+  geom_jitter(alpha=0.5)+
+  geom_smooth(method=lm)+
+  xlab ("Year") +
+  ylab ("Female mass (g)") +
+  ylim(14, 29)+
+  xlim(1983, 2016)+
+  theme_classic()+
+  theme(text = element_text(size=15))
                     
