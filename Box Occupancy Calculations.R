@@ -251,8 +251,13 @@ baseTerrGraph +
 #That one is fascinating. It's soooo different from the BG box occupancy, which
 #parallels the total occupancy so closely
 
+<<<<<<< HEAD
 allgridTerrGraph <- 
   baseTerrGraph +stat_smooth(aes(Year, y=TerrOccHU, color="TerrOccHU"), se=FALSE)+
+=======
+allgridTerrGraph <- baseTerrGraph +
+  stat_smooth(aes(Year, y=TerrOccHU, color="TerrOccHU"), se=FALSE)+
+>>>>>>> d3fc7014a5bc8e7fda0a4dd4d55ad9648eee4c51
   stat_smooth(aes(Year, y=TerrOccNB, color= "TerrOccNB"), se=FALSE)+
   stat_smooth(aes(Year, y=TerrOccNES, color= "TerrOccNES"), se=FALSE)+
   stat_smooth(aes(Year, y=TerrOccSP, color= "TerrOccSP"), se=FALSE)+
@@ -263,6 +268,7 @@ allgridTerrGraph <-
                        labels=c("Hughson's", "New Barn", "North-East Sanctuary", "Sandpit", "SRB","Bridgets" ,"All grids"))
 
 
+<<<<<<< HEAD
 PresentationBoxOcc 
 ggplot(BoxOccupancy, aes(x=Year, y= value), show.legend=F)+
   geom_point(aes(Year, y=BoxOccTotal, color="BoxOccTotal"), show.legend = F)+
@@ -271,3 +277,5 @@ ggplot(BoxOccupancy, aes(x=Year, y= value), show.legend=F)+
   ylab ("Box Occupancy") +
   theme_classic()+
   theme(text = element_text(size=20), axis.title.y = element_text(angle=0, vjust=0.5))
+=======
+>>>>>>> d3fc7014a5bc8e7fda0a4dd4d55ad9648eee4c51
