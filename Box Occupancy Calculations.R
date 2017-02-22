@@ -251,8 +251,9 @@ baseTerrGraph +
 #That one is fascinating. It's soooo different from the BG box occupancy, which
 #parallels the total occupancy so closely
 
-allgridTerrGraph <- 
-  baseTerrGraph +stat_smooth(aes(Year, y=TerrOccHU, color="TerrOccHU"), se=FALSE)+
+
+allgridTerrGraph <- baseTerrGraph +
+  stat_smooth(aes(Year, y=TerrOccHU, color="TerrOccHU"), se=FALSE)+
   stat_smooth(aes(Year, y=TerrOccNB, color= "TerrOccNB"), se=FALSE)+
   stat_smooth(aes(Year, y=TerrOccNES, color= "TerrOccNES"), se=FALSE)+
   stat_smooth(aes(Year, y=TerrOccSP, color= "TerrOccSP"), se=FALSE)+
