@@ -76,13 +76,13 @@ corvif(adult3[,MyVar])
 #colinearity is not going to be an issue
 
 #Step 3: Check for relationships
-Myxyplot(adult3, MyVar)
+Myxyplot(adult3, MyVar, "mass")
 plot(adult3$mass~adult3$year2)
 plot(adult3$mass~adult3$dateMeas2)
 plot(adult3$mass~adult3$clutchsize) #variance will be an issue
 plot(adult3$mass~adult3$sex)
 plot(adult3$mass~adult3$hatchdate) #variance will be an issue
-
+plot(adult3$mass~adult3$age)
 
 #OK now we are ready to start the modeling
 
@@ -93,20 +93,16 @@ adult4 <- adult3[which(!is.na(adult3$clutchsize) &
                          !is.na(adult3$sex) &
                          !is.na(adult3$year2) &
                          !is.na(adult3$diff) &
-                         !is.na(adult3$mass)
+                         !is.na(adult3$mass) &
+                         !is.na(adult3$age)
                  ),]
                             
 adult4$diff2 <- scale(adult4$diff)
-mod1 <- glmer(mass~ year2*clutchsize*diff*sex* (1 | band), data=adult4, family=gaussian())
+#I'd like to add age to this model as well but I'm not sure how best to do this-- right now it's getting dropped
+mod1 <- lmer(mass~ year2*clutchsize*diff*sex + (1 | band), data=adult4)
 summary(mod1)
 #the random intercept of band explains 1.9 variance (more than residual variance of 0.87 so I'm keeping it!)
 
-#Dispersion doens't apply to normal distributions since you actively calculate dispersion so this was a silly thing to calculate
-# E1 <- resid(mod1, type="pearson")
-# N <- nrow(adult4)
-# p <- length(fixef(mod1))
-# Dispersion <- sum(E1^2 /(N-p))
-# Dispersion
 
 
 Anova(mod1) #Cool. All sorts of things are significant
@@ -114,43 +110,46 @@ Anova(mod1) #Cool. All sorts of things are significant
 
 
 hist(resid(mod1)) #nice!
-plot(resid(mod1)~ adult4$year2) #Yeah I DEFINITELY have issues with variance
+plot(resid(mod1)~ adult4$year2) 
 plot(resid(mod1)~adult4$sex) #this is fine
-plot(resid(mod1)~ adult4$clutchsize) #again, variance issues
+plot(resid(mod1)~ adult4$clutchsize) #variance issues
 plot(resid(mod1)~adult4$diff) #Data is clumpy but maybe not really so bad?
 
 #There were errors about scaling variables-- why don't I try to fix that by using the scaled diff
-mod2 <- lmer(mass~ year2*clutchsize*diff2*sex* (1 | band), data=adult4)
+mod2 <- lmer(mass~ year2*clutchsize*diff2*sex+ (1 | band), data=adult4)
 summary(mod2)
 plot(mod2)
+
+#Take things out until the trends go away
+#looks like it's the random effect that is causing this problem
 hist(resid(mod2)) #nice!
-plot(resid(mod2)~ adult4$year2) #Yeah I DEFINITELY have issues with variance
+plot(resid(mod2)~ adult4$year2) #good enough
 plot(resid(mod2)~adult4$sex) #this is fine
-plot(resid(mod2)~ adult4$clutchsize) #again, variance issues
-plot(resid(mod2)~adult4$diff2) #Data is clumpy and looks like it might be trending upward very slightly
+plot(resid(mod2)~ adult4$clutchsize) #again, variance issues but that's probably oK because it's just due to having less data
+plot(resid(mod2)~adult4$diff2) #Data is clumpy and looks like it might be trending upward very slightly  but it's actually totally ok
+
+mod3 <- lm(mass~ year2*clutchsize*diff2*sex, data=adult4)
+options(na.action="na.fail")
+allmodels <- dredge(mod3, extra="R^2", beta="sd") #this will give you R^2
+topmodels <- get.models(allmodels, subset=delta<3)
+
+Anova(mod3)
+plot(mod3)
+
+#Better model would probably not include the four way interactions
+mod4 <- lm(mass~ year2+clutchsize+diff2+sex+ #all the main effects
+             year2:clutchsize + year2:diff2 + year2:sex + clutchsize:diff2 + clutchsize:sex + diff2:sex+ #2 way interactions
+             year2:clutchsize:diff2 + year2:clutchsize:sex + year2:sex:diff2 + clutchsize:diff2:sex, data=adult4)
+plot(mod4)
+hist(resid(mod4, type="pearson"))
+#check assumptions again on the top model
+#Check up on whether you're meeting assumptions of likelihood (what are the assumptions of likelihood)
+#likelihood assumes probablility distribution but need to double checck on that. 
 
 
-#As expected we are still having issues with variance
-VF <- varIdent(form=~1|adult4$clutchsize)
-mod3 <- lmer(mass~ year2*clutchsize*diff2*sex* (1 | band), 
-              data=adult4,
-             weights=varPower(form=~year2))
+#add small random error to see if the argyle pattern dissapates. 
 
-#Someone online said that using lme might work better. Doesn't seem to?
-lme(mass~ year2*clutchsize*diff2*sex , data = adult4, random = ~ band)
+#pick a random measurement of the bird from the list of measurements
+#redo this over and over and over to get a good estimate of p values
 
 
-
-
-
-
-
-#Maybe we could try using a gamma distribution since mass is strictly positive?
-#Maybe the issue with variance is just due to having chosen the wrong distribution?
-
-gmmod1 <- glmer(mass~ year2*clutchsize*diff2*sex* (1 | band), data=adult4, family=Gamma(link="identity"))
-
-gmmod2 <- glmer(mass~ year2*clutchsize*diff2*sex* (1 | band), data=adult4, family=Gamma(link="log"))
-gmmod3 <- glmer(mass~ year2*clutchsize*diff2*sex* (1 | band), data=adult4, family=Gamma(link="inverse"))
-
-#Don't really understant why I'm getting all these errors? 
