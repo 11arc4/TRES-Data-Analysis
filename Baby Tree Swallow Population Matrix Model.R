@@ -91,6 +91,7 @@ recruitrateoffledgelings <- sum(recruit)/sum(parameters$fledge, na.rm=T)
 return <- rep(NA, length(as.list(globalData$birds)))
 Return <- data.frame(return)
 Return$sex <- rep(NA, length(as.list(globalData$birds)))
+Return$immigrant<- rep(NA, length(as.list(globalData$birds)))
 totaladults <- 0
 for (bird in as.list(globalData$birds)){
   y=0
@@ -108,6 +109,14 @@ for (bird in as.list(globalData$birds)){
         Return$return[totaladults] <- 0
         
       }
+      if(y==1){
+        if(is.na(bird$hatchnest$m_key)){
+          Return$immigrant[totaladults] <- 1
+        } else {
+          Return$immigrant[totaladults] <- 0
+        }
+      } 
+      
     }
   }
 }
@@ -151,9 +160,15 @@ N0 <- c(0, 0, 0, 54)
 p<- pop.projection(A=A, n=N0, iterations=42)
 p
 
-
+#Plot when the tree swallows will stabilize
 par(mar=c(2.5, 2.5, 0.5, 0.5))
 stage.vector.plot(stage.vectors = p$stage.vectors, col=2:4, mgp=c(1.2,0.4, 0))
 
+#Plot how the tree swallow population change stabilizes
 lambda <- p$pop.changes
+time <- c(2:42)
+plot(lambda~time, ylab="Population growth", xlab="Years after grid establishment")
 
+#Plot how the population changes over time
+p2 <- project(A=A, vector=N0, time=42)
+plot(p2 )
