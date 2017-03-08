@@ -70,6 +70,10 @@ Mydotplot(adult3[,MyVar2])
 #OK that's finally WAYYYY better although I lost a lot of points
 
 
+
+hist(adult4$year)
+hist(adult4$diff2)
+hist(adult4$clutchsize)
 #Step 2: Check for colinearity
 corvif(adult3[,MyVar])
 #Yay! No one has variance inflation factor (VIF) greater than even 1.25 so
@@ -140,14 +144,28 @@ plot(mod3)
 mod4 <- lm(mass~ year2+clutchsize+diff2+sex+ #all the main effects
              year2:clutchsize + year2:diff2 + year2:sex + clutchsize:diff2 + clutchsize:sex + diff2:sex+ #2 way interactions
              year2:clutchsize:diff2 + year2:clutchsize:sex + year2:sex:diff2 + clutchsize:diff2:sex, data=adult4)
-plot(mod4)
+plot(mod4)  #Aside from that problematic argyle deal this looks fantastic
+plot(resid(mod4)~ adult4$year2) #good enough
+plot(resid(mod4)~adult4$sex) #this is fine
+plot(resid(mod4)~ adult4$clutchsize) #again, variance issues but that's probably oK because it's just due to having less data
+plot(resid(mod4)~adult4$diff2)
 hist(resid(mod4, type="pearson"))
+
+
+
+
 #check assumptions again on the top model
 #Check up on whether you're meeting assumptions of likelihood (what are the assumptions of likelihood)
 #likelihood assumes probablility distribution but need to double checck on that. 
 
 
 #add small random error to see if the argyle pattern dissapates. 
+adult4$clutchsize2 <- adult4$clutchsize + rnorm(n=length(adult4$clutchsize), mean=0, sd=1)
+mod4 <- lm(mass~ year2+clutchsize2+diff2+sex+ #all the main effects
+             year2:clutchsize2 + year2:diff2 + year2:sex + clutchsize2:diff2 + clutchsize2:sex + diff2:sex+ #2 way interactions
+             year2:clutchsize2:diff2 + year2:clutchsize2:sex + year2:sex:diff2 + clutchsize2:diff2:sex, data=adult4)
+plot(mod4)
+#HUH. Clutch size is NOT what is causing the argyle look.... no idea what's going on then
 
 #pick a random measurement of the bird from the list of measurements
 #redo this over and over and over to get a good estimate of p values
