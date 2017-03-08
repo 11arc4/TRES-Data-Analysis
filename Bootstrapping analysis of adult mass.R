@@ -8,7 +8,7 @@ setwd("~/Masters Thesis Project/TRES Data Analysis")
 library(car)
 library(MuMIn)
 library(beepr)
-for (i in 1:25){
+for (i in 1:1000){
   band <- c()
   year <- c()
   sex <- c()
@@ -218,12 +218,18 @@ for (i in 1:25){
     colnames(bootfstats) <- rownames(bootAV)
     bootfstats$N <- rep(NA, length(bootfstats$year2))
     
+    bootpval <- data.frame(matrix(NA, ncol=15, nrow=1000))
+    colnames(bootpval) <- rownames(bootAV)
+    bootpval$N <- rep(NA, length(bootpval$year2))
+    
   }
   bootfstats[i,1:15]<-  bootAV[["F value"]]
+  bootpval[i, 1:15] <- bootAV[["Pr(>F)"]]
+  bootpval$N[i]<- length(adult3$band)
   bootfstats$N[i] <- length(adult3$band)
   bootestimates [i,1:22] <-bootsumm$coefficients[1:22]
   bootestimates$N[i] <- length(adult3$band)
-  message ("done", i, "in 1000 iterations of analysis", sep=" ")
+  message ("done ", i, " in 1000 iterations of analysis", sep=" ")
 }
 #IF I want to dredge the model instead
 #options(na.action="na.fail")
@@ -241,9 +247,52 @@ write.csv(bootestimates, file= paste(outputdir, "Adult Mass Bootstrapping Estima
 #with this right now. Will come back
 
 
-FStats <-data.frame(matrix(NA, nrow=length(bootfstats), ncol=3))
-colnames(FStats)<- c("F", "sd", "pvalue")
-rownames(FStats) <- colnames(bootfstats)
+FStats <-data.frame(matrix(NA, nrow=14, ncol=6))
+colnames(FStats)<- c("F","upperF", "lowerF",  "pvalue", "upperPvalue", "lowerPvalue")
+rownames(FStats) <- colnames(bootfstats)[1:14]
+
+FEstimates <- data.frame((matrix(NA, nrow=22, ncol= 3)))
+colnames(FEstimates) <- c("estimate", "upperEstimate", "lowerEstimate")
+rownames(FEstimates) <- colnames(bootestimates)[1:22]
 
 
-mean(bootfstats[,1])
+for (key in colnames(bootfstats)[1:14]){
+  
+  #F Value
+  FStats[key, "F"] <- mean(bootfstats[,key])
+  #lets generate confidence intervals on that shit
+  #upper confidence interval
+  FStats[key, "upperF"] <-bootfstats[, key][order(bootfstats[,key])][975]
+  #lower confidence intervals
+  FStats[key, "lowerF"] <-bootfstats[, key][order(bootfstats[,key])][25]
+  
+  
+  #P value
+  FStats[key, "pvalue"] <-mean(bootpval[, key])
+  #lets generate confidence intervals on that shit
+  #upper confidence interval
+  FStats[key, "upperPvalue"] <-bootpval[, key][order(bootpval[,key])][975]
+  #lower confidence intervals
+  FStats[key, "lowerPvalue"] <-bootpval[, key][order(bootpval[,key])][25]
+  
+  
+  
+  
+}
+
+
+for (key in colnames(bootestimates)[1:22]){
+  #Estimate
+  FEstimates[key, "estimate"] <-mean(bootestimates[, key])
+  #lets generate confidence intervals on that shit
+  #upper confidence interval
+  FEstimates[key, "upperEstimate"] <-bootestimates[, key][order(bootestimates[,key])][975]
+  #lower confidence intervals
+  FEstimates[key, "lowerEstimate"] <-bootestimates[, key][order(bootestimates[,key])][25]
+}
+
+
+
+
+
+
