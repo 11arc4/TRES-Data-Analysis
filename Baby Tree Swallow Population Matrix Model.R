@@ -4,123 +4,193 @@ library(popdemo)
 library(popbio)
 
 #Calculate the average number of nests a bird is involved in 
-totalnests <- rep(NA, length(as.list(globalData$birds)))
-years <- rep(NA, length(as.list(globalData$birds)))
+nestsinyear <- rep(NA, length(as.list(globalData$birds)))
+year <- rep(NA, length(as.list(globalData$birds)))
 sex <- rep(NA, length(as.list(globalData$birds)))
-reprod<- data.frame(totalnests, years, sex)
+age <- rep(NA, length(as.list(globalData$birds)))
+birdband <- rep(NA, length(as.list(globalData$birds)))
+reprod<- data.frame(nestsinyear, year, sex, age, birdband)
 a=0
 for(bird in as.list(globalData$birds)){
   #if a bird was seen as a nestling BUT was seen in multiple years or the bird wasn't a nestling
   if((!is.na(bird$hatchnest$m_key) & bird$yearsSeen$length>1)| is.na(bird$hatchnest$m_key)){
-    a=a+1
-    reprod$totalnests[a] <- 0
     for(year in bird$yearsSeen$as.list()){
-      reprod$totalnests[a]<- reprod$totalnests[a] + year$nest$length
+      a=a+1
+      if(is.na(year$hatchNest$m_key)){
+        reprod$nestsinyear[a]<- year$nest$length
+        reprod$age[a] <- year$age
+        reprod$sex[a] <- bird$sex
+        reprod$birdband[a] <- bird$bandID
+        reprod$year[a]<- year$year
+      }
+      
     }
     
-    reprod$sex[a] <- bird$sex
-    if(is.na(bird$hatchnest$m_key)){
-      reprod$years[a] <- bird$yearsSeen$length
-    } else {
-      reprod$years[a] <- bird$yearsSeen$length-1
-    }
     
   }
 }
 reprod <- reprod[1:a,]
 
 #calculate the mean number of nests for females 
-
-reprod$nestsperyear<- reprod$totalnests/reprod$years
 Freprod<- reprod %>% filter(sex=="F")
-meanclutches <- mean(Freprod$nestsperyear, na.rm = T) #0.6446686
-#I think this is problematic because there is unequal effort to catch
-#nonreproducing females each year-- will be the same issue with the males
+meanclutchesF <- mean(Freprod$nestsinyear, na.rm = T) #0.7154278
+#Does it differ if you are SY vs ASY?
+SYFreprod <- reprod %>% filter(sex=="F" & age== "SY")
+meanclutchesSYF <- mean(SYFreprod$nestsinyear, na.rm=T) #0.4108068
+
+ASYFreprod <- reprod %>% filter(sex=="F" & age != "SY")
+meanclutchesASYF <- mean(ASYFreprod$nestsinyear, na.rm=T) #0.8410131
+
+#mean number of nests per male
 Mreprod <- reprod%>% filter(sex=="M")
-mean(Mreprod$nestsperyear, na.rm = T) #0.7259783
+mean(Mreprod$nestsinyear, na.rm = T) #0.7851204
 ######################################################################################
 
 #Now calculate average clutch size, hatch size, and fledge success.
 clutch<- rep(NA, length(as.list(globalData$nests)))
 hatch <- rep(NA, length(as.list(globalData$nests)))
 fledge <- rep(NA, length(as.list(globalData$nests)))
+FAge <- rep(NA, length(as.list(globalData$nests)))
+year <- rep(NA, length(as.list(globalData$nests)))
+recruits <- rep(NA, length(as.list(globalData$nests)))
+parameters <- data.frame(clutch, hatch, fledge, FAge, year, recruits)
+
 i=0
 for(nest in as.list(globalData$nests)){
   i=i+1
-  clutch[i] <- nest$clutchSize
-  hatch[i] <- nest$hatchSize
-  fledge[i] <- nest$fledgeSize
+  parameters$clutch[i] <- nest$clutchSize
+  parameters$hatch[i] <- nest$hatchSize
+  parameters$fledge[i] <- nest$fledgeSize
+  parameters$year[i]<- nest$year
+  if (!is.na(nest$femaleID$m_key)){
+    message("Known female", nest$femaleID$m_key)
+    bird <- get(nest$femaleID$m_key, globalData$birds)
+    for (year in bird$yearsSeen$as.list()){
+      if(nest$year==year$year){
+        parameters$FAge[i]<- year$age
+      }
+    }
+  }
+  #THis part most definitely isn't working right now. I will need to fuss (says only 6 individuals ever recruited and that's a lie)
+  parameters$recruits[i] = 0
+  for(nestling in nest$nestlings$as.list()){
+    if(!is.null(nestling$nestlingTRES$m_key)){
+      adult <- get(nestling$nestlingTRES$m_key, globalData$birds)
+      if(adult$yearsSeen$length>1){
+        parameters$recruits[i] <- parameters$recruits[i] +1
+      } 
+    }
+    
+  }
 }
 
 
 
-parameters <- data.frame(clutch, hatch, fledge)
 
-#removed these three nests where we are getting infinite clutch size because they had no eggs but a nestling was transfered in
+#removed these three nests where we are getting infinite clutch size because
+#they had no eggs but a nestling was transfered in
 parameters <- parameters [-c(which(parameters$hatch>parameters$clutch & parameters$clutch==0)), ]
-parameters$hatchrate <- parameters$hatch/parameters$clutch
-parameters$fledgerate <- parameters$fledge/parameters$hatch
+parametersSYF <- parameters %>% filter(FAge=="SY")
+parametersASYF <- parameters %>% filter(FAge!="SY" & !is.na(FAge))
+ #Mean clutch size
+meanClutchSize <- mean(parameters$clutch, na.rm=T)  #5.273177
+#Does it differ by SY and ASY?
+meanClutchSizeSYF <- mean(parametersSYF$clutch, na.rm=T) #4.946609
+meanclutchSizeASYF <- mean(parametersASYF$clutch, na.rm=T) #5.459556
+
+#mean Layrate
+layrate <- meanClutchSize * meanclutches #3.772577
+#Mean layrate by age of female
+layrateSY <- meanClutchSizeSYF * meanclutchesSYF #2.032101
+layrateASY <- meanclutchSizeASYF * meanclutchesASYF #4.591558
 
 
-hatchrate <- mean(parameters$hatchrate, na.rm=T) #0.7398289
+#Can only calculate hatchrate for clutches laid-- already dealt with above though
+hatchPar <- parameters %>% filter(!is.na(hatch) & !is.na(clutch))
+hatchrate <- mean(hatchPar$hatch)/mean(hatchPar$clutch) #0.7635578
+#Does if differ by SY and ASY?
+hatchParSY <- parameters %>% filter(!is.na(hatch) & !is.na(clutch) & FAge=="SY")
+hatchrateSY <- mean(hatchParSY$hatch)/mean(hatchParSY$clutch) #0.782032
+hatchParASY <- parameters %>% filter(!is.na(hatch) & !is.na(clutch) & FAge!="SY" & !is.na(FAge))
+hatchrateASY <- mean(hatchParASY$hatch)/mean(hatchParASY$clutch) #0.803318
+#Hatch success is slightly higher for ASY females but not much
 
-fledgerate <- mean(parameters$fledgerate, na.rm=T) #0.628297
-#Layrate for adults is the mean number of nests*mean eggs laid!
-layrate <- meanclutches * mean(parameters$clutch, na.rm=T) #3.399451
+
+#Fledge rate
+fledgePar <- parameters %>% filter (hatch>0 & !is.na(fledge))
+fledgerate <- mean(fledgePar$fledge, na.rm=T)/mean(fledgePar$hatch) #0.6286203
+#Does fledge success vary by female age?
+fledgeParSY <- fledgePar %>% filter(FAge=="SY")
+fledgerateSY <- mean(fledgeParSY$fledge, na.rm=T)/mean(fledgeParSY$hatch) #0.5907071
+fledgeParASY <- fledgePar %>% filter(FAge=="ASY" & !is.na(FAge))
+fledgerateASY <- mean(fledgeParASY$fledge, na.rm=T)/mean(fledgeParASY$hatch) #0.6236889
+
+
+
+
 
 #Yay! Now we just needd estimates of recruitment and return!
 totalnestlings <- 0
 recruit<- rep(NA, length(as.list(globalData$nestlings)))
+sex <- rep(NA, length(as.list(globalData$nestlings)))
+Recruit <- data.frame(recruit, sex)
 for(nestling in as.list(globalData$nestlings)){
   totalnestlings <- totalnestlings + 1
   if(is.na(nestling$nestlingTRES$m_key)){
-    recruit[totalnestlings] <- 0
+    Recruit$recruit[totalnestlings] <- 0
     
   } else {
     adultbird <- get(nestling$nestlingTRES$m_key, nestling$nestlingTRES$m_hash)
     if (adultbird$yearsSeen$length>1){
-      recruit[totalnestlings] <- 1
+      Recruit$recruit[totalnestlings] <- 1
+      Recruit$sex[totalnestlings] <- adultbird$sex
     } else {
-      recruit[totalnestlings] <- 0
+      Recruit$recruit[totalnestlings] <- 0
     }
   }
 }
-recruitrateoffledgelings <- sum(recruit)/sum(parameters$fledge, na.rm=T)
+
+#Divide the number of recruits by the total number of fledgelings
+recruitrateoffledgelings <- sum(Recruit$recruit)/sum(parameters$fledge, na.rm=T) #0.02480715
+#I"m assuming that they fledge at the same rates but perhaps recruit at different rates
+
 
 #Need to estimate return rates. I will also do this based on sex. 
-return <- rep(NA, length(as.list(globalData$birds)))
-Return <- data.frame(return)
-Return$sex <- rep(NA, length(as.list(globalData$birds)))
-Return$immigrant<- rep(NA, length(as.list(globalData$birds)))
-totaladults <- 0
+returnstatus <- rep(NA, 82000)
+Adults <- data.frame(returnstatus)
+Adults$sex <- rep(NA, 82000)
+Adults$age<- rep(NA, 82000)
+Adults$band <- rep(NA, 82000)
+
+i <- 0
 for (bird in as.list(globalData$birds)){
-  y=0
+  if(bird$yearsSeen$length>1){
+    #message("Sorting years")
+    l2 <- bird$yearsSeen$as.list()
+    l3 <- l2[order(sapply(l2, function(v) { v$year} ))]
+    bird$yearsSeen$replaceList(l3)
+  }
   for (year in bird$yearsSeen$as.list()){
-    y=y+1
-    
-    if(!is.na(year$hatchNest$m_key)){
-      next
-    } else {
-      totaladults<- totaladults +1
-      Return$sex[totaladults] <- bird$sex
-      if(y<bird$yearsSeen$length){
-        Return$return[totaladults] <- 1
-      } else {
-        Return$return[totaladults] <- 0
-        
-      }
-      if(y==1){
-        if(is.na(bird$hatchnest$m_key)){
-          Return$immigrant[totaladults] <- 1
-        } else {
-          Return$immigrant[totaladults] <- 0
-        }
-      } 
-      
-    }
+    i=i+1
+    Adults$age[i] <- year$age 
+    Adults$returnstatus[i] <- year$returnStatus
+    Adults$sex[i] <- bird$sex
+    Adults$band[i] <- bird$bandID
   }
 }
-Return <- Return[which(!is.na(Return$return)), ] 
+Adults$sex<- as.factor(Adults$sex)
+Adults$returnstatus<- as.factor(Adults$returnstatus)
+Adults$age <- as.factor(Adults$age)
+
+Adults <- Adults[which(!is.na(Adults$band)),]
+#make the adults actually only the adults
+Adults <- Adults[which(Adults$age != "HY"),]
+Adults$band[which(Adults$returnstatus=="Recruit")]
+
+Adults$sex[which(Adults$returnstatus=="Return" & Adults$sex=="F")]
+FReturn <- length()
+
+Return <- Adults[which(!is.na(Adults$return)), ] 
 FReturn <- Return %>% filter(sex=="F")
 MReturn <- Return %>% filter(sex=="M")
 
@@ -140,10 +210,12 @@ Mreturnrate <- mean(MReturn$return) #0.2730853
 stages <- c("egg", "nestling", "fledgelings", "Adult")
 A <- matrix(0, nrow=4, ncol=4, dimnames = list(stages, stages))
 
-A[1,4]<- layrate/2
-A[2,1]<- hatchrate/2
-A[3,2]<- fledgerate/2
-A[4,3] <- recruitrateoffledgelings/2
+A[1,4]<- mean(parameters$clutch, na.rm=T)/2 #I'm going to use this instead of layrate for a moment (this assumes 1 clutch per bird)
+#Assume the same rates for males and females
+A[2,1]<- hatchrate
+A[3,2]<- fledgerate
+A[4,3] <- recruitrateoffledgelings 
+#Don't need to assume the same rates for males and females
 A[4,4]<- Freturnrate
 
 
@@ -172,3 +244,31 @@ plot(lambda~time, ylab="Population growth", xlab="Years after grid establishment
 #Plot how the population changes over time
 p2 <- project(A=A, vector=N0, time=42)
 plot(p2 )
+
+
+
+#Not lets do an eigen analysis
+
+eigA <- eigen.analysis(A)
+eigA
+#We are most sensetive to changes in the recruitment rate
+#Elasticity is highest in the fledging and recritment rate. For a 1% change, we will have a 20.4% change in lambda for both of these
+
+
+return<- seq(from=0.01, to= 0.7, by=0.01)
+
+lam <- c()
+A2 <- A
+i=0
+for (returnrate in return){
+  i=i+1
+  A2[4,4]<- returnrate
+  p2 <- pop.projection(A2, N0, 50)
+  lam[i]<- p2$lambda
+}
+lam
+
+plot(lam~return, ylab="Population growth rate", xlab="Adult Return")
+abline(h=1, col="red")
+
+#Even with the assumption that all birds get one nest per year we still are having trouble. I think this is maybe 
