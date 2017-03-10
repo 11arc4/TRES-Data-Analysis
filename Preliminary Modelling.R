@@ -30,15 +30,13 @@ AllNestdata$M.Mass..g.[which(AllNestdata$M.Mass..g.>40  | AllNestdata$M.Mass..g.
 
 
 ggplot(AllNestdata, aes(x=F.Day.measured, y= F.Mass..g.))+
-  geom_point(alpha = 1/10)+
 geom_jitter()+
 geom_smooth()
 
 
 ggplot(AllNestdata, aes(x=M.Day.measured, y= M.Mass..g.))+
-  geom_point(alpha = 1/10)+
   geom_jitter(alpha=1/10)+
-  stat_smooth(method=lm)
+  geom_smooth()
 
 #Preliminary Adult mass by year models
 #I've modeled mass by year and the julian day within the year (those factors are
@@ -112,7 +110,7 @@ ggplot(FledgeMalaria, aes(x=Year, y= Fledge.Size, color=F.Malaria.Status) )+
 ggplot(FledgeMalaria, aes(x=Year, y= Fledge.Size, color=M.Malaria.Status) )+
   geom_point()
 
-Fledge_mod <- lm(FledgeMalaria$Fledge.Size~
+Fledge_mod <- glm(FledgeMalaria$Fledge.Size~
                    FledgeMalaria$F.Malaria.Status *
                    FledgeMalaria$Year * 
                    FledgeMalaria$M.Malaria.Status *
