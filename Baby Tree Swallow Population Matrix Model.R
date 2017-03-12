@@ -52,8 +52,10 @@ hatch <- rep(NA, length(as.list(globalData$nests)))
 fledge <- rep(NA, length(as.list(globalData$nests)))
 FAge <- rep(NA, length(as.list(globalData$nests)))
 year <- rep(NA, length(as.list(globalData$nests)))
-recruits <- rep(NA, length(as.list(globalData$nests)))
-parameters <- data.frame(clutch, hatch, fledge, FAge, year, recruits)
+Mrecruits <- rep(0, length(as.list(globalData$nests)))
+Frecruits <- rep(0, length(as.list(globalData$nests)))
+Urecruits <- rep(0, length(as.list(globalData$nests)))
+parameters <- data.frame(clutch, hatch, fledge, FAge, year, Mrecruits, Frecruits, Urecruits)
 
 i=0
 for(nest in as.list(globalData$nests)){
@@ -72,16 +74,31 @@ for(nest in as.list(globalData$nests)){
     }
   }
   #THis part most definitely isn't working right now. I will need to fuss (says only 6 individuals ever recruited and that's a lie)
-  parameters$recruits[i] = 0
-  for(nestling in nest$nestlings$as.list()){
-    if(!is.null(nestling$nestlingTRES$m_key)){
-      adult <- get(nestling$nestlingTRES$m_key, globalData$birds)
-      if(adult$yearsSeen$length>1){
-        parameters$recruits[i] <- parameters$recruits[i] +1
-      } 
+  if(nest$nestlings$length>0){
+    for(nestlingEnvP in nest$nestlings$as.list()){
+      nestling <- get(nestlingEnvP$m_key, globalData$nestlings)
+      if(!is.na(nestling$nestlingTRES$m_key)){
+        adult <- get(nestling$nestlingTRES$m_key, globalData$birds)
+        if(adult$yearsSeen$length>1){
+          if(adult$sex=="M"){
+            parameters$Mrecruits[i] <- parameters$Mrecruits[i] +1
+            
+          } else {
+            if (adult$sex=="F"){
+              parameters$Urecruits[i] <- parameters$Frecruits[i] +1
+              
+            } else {
+              parameters$Urecruits[i] <- parameters$Urecruits[i] +1
+              
+            }
+          }
+          parameters$recruits[i] <- parameters$recruits[i] +1
+        } 
+      }
+      
     }
-    
   }
+  
 }
 
 
@@ -106,27 +123,40 @@ layrateASY <- meanclutchSizeASYF * meanclutchesASYF #4.591558
 
 
 #Can only calculate hatchrate for clutches laid-- already dealt with above though
-hatchPar <- parameters %>% filter(!is.na(hatch) & !is.na(clutch))
-hatchrate <- mean(hatchPar$hatch)/mean(hatchPar$clutch) #0.7635578
+hatchPar <- parameters %>% filter(!is.na(hatch) & clutch>0)
+hatchrate <- mean(hatchPar$hatch/hatchPar$clutch) #0.7398289
 #Does if differ by SY and ASY?
 hatchParSY <- parameters %>% filter(!is.na(hatch) & !is.na(clutch) & FAge=="SY")
-hatchrateSY <- mean(hatchParSY$hatch)/mean(hatchParSY$clutch) #0.782032
-hatchParASY <- parameters %>% filter(!is.na(hatch) & !is.na(clutch) & FAge!="SY" & !is.na(FAge))
-hatchrateASY <- mean(hatchParASY$hatch)/mean(hatchParASY$clutch) #0.803318
+hatchrateSY <- mean(hatchParSY$hatch/ hatchParSY$clutch) #0.7660019
+hatchParASY <- parameters %>% filter(!is.na(hatch) & !is.na(clutch) & FAge!="SY" & !is.na(FAge) & clutch>0)
+hatchrateASY <- mean(hatchParASY$hatch/hatchParASY$clutch) #0.7913602
 #Hatch success is slightly higher for ASY females but not much
 
 
 #Fledge rate
 fledgePar <- parameters %>% filter (hatch>0 & !is.na(fledge))
-fledgerate <- mean(fledgePar$fledge, na.rm=T)/mean(fledgePar$hatch) #0.6286203
+fledgerate <- mean(fledgePar$fledge/fledgePar$hatch) #0.6280591
 #Does fledge success vary by female age?
 fledgeParSY <- fledgePar %>% filter(FAge=="SY")
-fledgerateSY <- mean(fledgeParSY$fledge, na.rm=T)/mean(fledgeParSY$hatch) #0.5907071
+fledgerateSY <- mean(fledgeParSY$fledge/fledgeParSY$hatch) #0.5870798
 fledgeParASY <- fledgePar %>% filter(FAge=="ASY" & !is.na(FAge))
-fledgerateASY <- mean(fledgeParASY$fledge, na.rm=T)/mean(fledgeParASY$hatch) #0.6236889
+fledgerateASY <- mean(fledgeParASY$fledge/fledgeParASY$hatch) #0.6234409
 
 
+#Estimate recruitment
+###THIS IS ALL MESSED UP NOW-- ESIMATING WRONG
+recruitPar <- parameters %>% filter(fledge>0 )
+recruitrate <- mean((recruitPar$Mrecruits + recruitPar$Frecruits+ recruitPar$Urecruits)/recruitPar$fledge) #0.02039224
 
+
+#Does it differ by SY and ASY
+recruitParSY <- parameters %>% filter(fledge>0 & !is.na(recruits) & FAge == "SY" )
+recruitrateSY <- mean(recruitParSY$Mrecruits+ recruitParSY$/recruitParSY$fledge) #0.01605744
+
+recruitParASY <- parameters %>% filter(fledge>0 & !is.na(recruits) & FAge != "SY" & !is.na(FAge))
+recruitrateASY <- mean(recruitParASY$recruits/recruitParASY$fledge) #0.02314319
+
+#OH shit wow it really does!
 
 
 #Yay! Now we just needd estimates of recruitment and return!
@@ -154,6 +184,16 @@ for(nestling in as.list(globalData$nestlings)){
 recruitrateoffledgelings <- sum(Recruit$recruit)/sum(parameters$fledge, na.rm=T) #0.02480715
 #I"m assuming that they fledge at the same rates but perhaps recruit at different rates
 
+nrow(Recruit %>% filter(sex=="M")) #112 male recruits
+nrow(Recruit %>% filter(sex=="F")) #155 female recruits
+#Would this be drivin by the fact that we catch more of the females than the
+#males? I don't really think so because I'm pretty sure that they'd make sure to
+#catch any banded birds
+
+recruitofMfledgelings <- recruitrateoffledgelings * 112/ (112+155)
+recruitofFfledgelings <- recruitrateoffledgelings * 155/ (112+155)
+
+
 
 #Need to estimate return rates. I will also do this based on sex. 
 returnstatus <- rep(NA, 82000)
@@ -170,17 +210,20 @@ for (bird in as.list(globalData$birds)){
     l3 <- l2[order(sapply(l2, function(v) { v$year} ))]
     bird$yearsSeen$replaceList(l3)
   }
+  y=0
   for (year in bird$yearsSeen$as.list()){
     i=i+1
+    y=y+1
     Adults$age[i] <- year$age 
-    Adults$returnstatus[i] <- year$returnStatus
+    if (y<bird$yearsSeen$length){
+      Adults$returnstatus[i]<- "returned"
+    } else {
+      Adults$returnstatus[i] <- "died"
+    }
     Adults$sex[i] <- bird$sex
     Adults$band[i] <- bird$bandID
   }
 }
-Adults$sex<- as.factor(Adults$sex)
-Adults$returnstatus<- as.factor(Adults$returnstatus)
-Adults$age <- as.factor(Adults$age)
 
 Adults <- Adults[which(!is.na(Adults$band)),]
 #make the adults actually only the adults
@@ -190,11 +233,16 @@ Adults$band[which(Adults$returnstatus=="Recruit")]
 Adults$sex[which(Adults$returnstatus=="Return" & Adults$sex=="F")]
 FReturn <- length()
 
-Return <- Adults[which(!is.na(Adults$return)), ] 
-FReturn <- Return %>% filter(sex=="F")
-MReturn <- Return %>% filter(sex=="M")
 
-Freturnrate <- mean(FReturn$return) #0.2307692
+
+
+FReturn <- Adults %>% filter(sex=="F")
+MReturn <- Adults %>% filter(sex=="M")
+
+
+
+
+Freturnrate <-mean(FReturn$return) #0.2307692
 Mreturnrate <- mean(MReturn$return) #0.2730853
 
 
@@ -218,7 +266,7 @@ A[4,3] <- recruitrateoffledgelings
 #Don't need to assume the same rates for males and females
 A[4,4]<- Freturnrate
 
-
+A[4,4]<-0.23
 #Should both be true!
 is.matrix_irreducible(A) 
 #YAY
