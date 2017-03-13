@@ -4,7 +4,7 @@ library(popdemo)
 library(popbio)
 
 
-#We are only including birds who were part of the breeding population
+#We are only including birds who were part of the breeding population!
 
 
 
@@ -39,17 +39,17 @@ reprod <- reprod[1:a,]
 
 #calculate the mean number of nests for females 
 Freprod<- reprod %>% filter(sex=="F")
-meanclutchesF <- mean(Freprod$nestsinyear, na.rm = T) #0.7154278
+meanclutchesF <- mean(Freprod$nestsinyear, na.rm = T) #1.066505
 #Does it differ if you are SY vs ASY?
 SYFreprod <- reprod %>% filter(sex=="F" & age== "SY")
-meanclutchesSYF <- mean(SYFreprod$nestsinyear, na.rm=T) #0.4108068
+meanclutchesSYF <- mean(SYFreprod$nestsinyear, na.rm=T) #1.035661
 
 ASYFreprod <- reprod %>% filter(sex=="F" & age != "SY")
-meanclutchesASYF <- mean(ASYFreprod$nestsinyear, na.rm=T) #0.8410131
+meanclutchesASYF <- mean(ASYFreprod$nestsinyear, na.rm=T) #1.074427
 
 #mean number of nests per male
 Mreprod <- reprod%>% filter(sex=="M")
-mean(Mreprod$nestsinyear, na.rm = T) #0.7851204
+mean(Mreprod$nestsinyear, na.rm = T) #1.091163
 ######################################################################################
 
 #Now calculate average clutch size, hatch size, and fledge success.
@@ -87,16 +87,16 @@ for(nest in as.list(globalData$nests)){
       nestling <- get(nestlingEnvP$m_key, globalData$nestlings)
       if(!is.na(nestling$nestlingTRES$m_key)){
         adult <- get(nestling$nestlingTRES$m_key, globalData$birds)
-        if(adult$yearsSeen$length>1){
-          if(adult$nestList$length>0){
-            message("Joined breeding population ", adult$bandID)
-          }
+        if(adult$nestList$length>0){
+          
+            message("Joined breeding population ", adult$bandID, adult$sex)
+          
           if(adult$sex=="M"){
             parameters$Mrecruits[i] <- parameters$Mrecruits[i] +1
             
           } else {
             if (adult$sex=="F"){
-              parameters$Urecruits[i] <- parameters$Frecruits[i] +1
+              parameters$Frecruits[i] <- parameters$Frecruits[i] +1
               
             } else {
               parameters$Urecruits[i] <- parameters$Urecruits[i] +1
@@ -126,12 +126,14 @@ meanClutchSize <- mean(parameters$clutch, na.rm=T)  #5.273177
 meanClutchSizeSYF <- mean(parametersSYF$clutch, na.rm=T) #4.946609
 meanclutchSizeASYF <- mean(parametersASYF$clutch, na.rm=T) #5.459556
 
-#mean Layrate
-layrate <- meanClutchSize * meanclutches #3.772577
+#mean Layrate-- must be the same for males and females! (actually may differ bit
+#if we account for extrapair paternity but I can't at all and need to just
+#accept that this has been taken account in the averaging of the population
+#since everyone is doing it and succumbing to it)
+layrateF <- meanClutchSize * meanclutchesF #5.623868
 #Mean layrate by age of female
-layrateSY <- meanClutchSizeSYF * meanclutchesSYF #2.032101
-layrateASY <- meanclutchSizeASYF * meanclutchesASYF #4.591558
-
+layrateSY <- meanClutchSizeSYF * meanclutchesSYF #5.123011
+layrateASY <- meanclutchSizeASYF * meanclutchesASYF #5.865897
 
 #Can only calculate hatchrate for clutches laid-- already dealt with above though
 hatchPar <- parameters %>% filter(!is.na(hatch) & clutch>0)
@@ -146,32 +148,39 @@ hatchrateASY <- mean(hatchParASY$hatch/hatchParASY$clutch) #0.7913602
 
 #Fledge rate
 fledgePar <- parameters %>% filter (hatch>0 & !is.na(fledge))
-fledgerate <- mean(fledgePar$fledge/fledgePar$hatch) #0.6280591
+fledgerate <- mean(fledgePar$fledge/fledgePar$hatch) #0.628297
 #Does fledge success vary by female age?
 fledgeParSY <- fledgePar %>% filter(FAge=="SY")
 fledgerateSY <- mean(fledgeParSY$fledge/fledgeParSY$hatch) #0.5870798
 fledgeParASY <- fledgePar %>% filter(FAge=="ASY" & !is.na(FAge))
-fledgerateASY <- mean(fledgeParASY$fledge/fledgeParASY$hatch) #0.6234409
+fledgerateASY <- mean(fledgeParASY$fledge/fledgeParASY$hatch) #0.6239397
 
 
 #Estimate recruitment
 ###THIS IS ALL MESSED UP NOW-- ESIMATING WRONG
 recruitPar <- parameters %>% filter(fledge>0 )
-recruitrate <- mean((recruitPar$Mrecruits + recruitPar$Frecruits+ recruitPar$Urecruits)/recruitPar$fledge) #0.01979139
+recruitrate <- mean((recruitPar$Mrecruits + recruitPar$Frecruits+ recruitPar$Urecruits)/recruitPar$fledge) #0.0175883
+#This is likely an underestimate because we don't catch all the birds every year--how do I correct for that?
 
 
 #Does it differ by SY and ASY
 recruitParSY <- parameters %>% filter(fledge>0 &  FAge == "SY" )
-recruitrateSY <- mean((recruitParSY$Mrecruits+ recruitParSY$Urecruits + recruitParSY$Frecruits)/recruitParSY$fledge) #0.0154047
+recruitrateSY <- mean((recruitParSY$Mrecruits+ recruitParSY$Urecruits + recruitParSY$Frecruits)/recruitParSY$fledge)
+#0.01553525
 
 recruitParASY <- parameters %>% filter(fledge>0 &  FAge != "SY" & !is.na(FAge))
-recruitrateASY <- mean((recruitParASY$Mrecruits+ recruitParASY$Frecruits +recruitParASY$Urecruits)/recruitParASY$fledge) #0.02253803
+recruitrateASY <- mean((recruitParASY$Mrecruits+ recruitParASY$Frecruits +recruitParASY$Urecruits)/recruitParASY$fledge)
+#0.01961603
 
 #OH shit wow it really does!
+#Number of female recruits
+length(which(parameters$Frecruits>0)) 
+
+length(which(parameters$Mrecruits>0)) 
 
 
-
-#Need to estimate return rates. I will also do this based on sex. 
+#Need to estimate return rates. I will also do this based on sex.
+#Currently this is based on whether you come back or not (I'm assuming that if you come back you're breeding!)
 returnstatus <- rep(NA, 82000)
 Adults <- data.frame(returnstatus)
 Adults$sex <- rep(NA, 82000)
@@ -206,52 +215,56 @@ Adults <- Adults[which(!is.na(Adults$band)),]
 Adults <- Adults[which(Adults$age != "HY"),]
 Adults$band[which(Adults$returnstatus=="Recruit")]
 
-Adults$sex[which(Adults$returnstatus=="Return" & Adults$sex=="F")]
-FReturn <- length()
+Freturnrate <- nrow(Adults %>% filter (returnstatus=="returned" & sex=="F")) /
+                        nrow(Adults %>% filter (sex=="F"))
+#0.2344073
+SYFreturnrate <- nrow(Adults %>% filter (returnstatus=="returned" & sex=="F" & age=="SY")) / 
+                        nrow(Adults %>% filter (sex=="F" & age=="SY"))
+#0.1522606
+ASYFreturnrate <- nrow(Adults %>% filter (returnstatus=="returned" & sex=="F" & age!="SY" & !is.na(age))) /
+                          nrow(Adults %>% filter (sex=="F" & age!="SY" & !is.na(age)))
+
+#0.27142
 
 
-
-
-FReturn <- Adults %>% filter(sex=="F")
-MReturn <- Adults %>% filter(sex=="M")
-
-
-
-
-Freturnrate <-mean(FReturn$return) #0.2307692
-Mreturnrate <- mean(MReturn$return) #0.2730853
+Mreturnrate <- nrow(Adults %>% filter (returnstatus=="returned" & sex=="M")) /
+  nrow(Adults %>% filter (sex=="M"))
+#0.2739166
+#Oh look at that! Males return about like a ASY female. That makes sense in relation to everyone else. 
 
 
 
 ##########################################################
 #OK now I have all the relevent rates so now I want to create the matrices and put them into a analysis
 
-#I will look at only females-- therefore since I am assuming equal sex ratios
-#(seems valid after looking at Delmore et al. 2008) I will have to divide all
-#the rates in half
-#also currently treating SY and ASY females the same
+#I will look at only females-- therefore since I am assuming equal sex ratios 
+#(seems valid after looking at Delmore et al. 2008) I will have to divide the
+#lay rate in half and carry that through subsequently also currently treating SY
+#and ASY females the same
 
-stages <- c("egg", "nestling", "fledgelings", "Adult")
-A <- matrix(0, nrow=4, ncol=4, dimnames = list(stages, stages))
+stages <- c("egg", "nestling", "fledgelings", "SY", "ASY")
+A <- matrix(0, nrow=5, ncol=5, dimnames = list(stages, stages))
 
-A[1,4]<- mean(parameters$clutch, na.rm=T)/2 #I'm going to use this instead of layrate for a moment (this assumes 1 clutch per bird)
-#Assume the same rates for males and females
+A[1,4] <- layrateSY / 2 #(because we assume half will be male)
+A[1,5] <- layrateASY / 2 #(because we assume half will be male)
+#Now I know that hatch, fledge and recruitment differs a bit between SY and ASY
+#female's nests but I don't know how to deal with this right now. 
 A[2,1]<- hatchrate
 A[3,2]<- fledgerate
-A[4,3] <- recruitrateoffledgelings 
-#Don't need to assume the same rates for males and females
-A[4,4]<- Freturnrate
+A[4,3] <- recruitrate #this is likely an underestimate still because we haven't corrected for effort yet!
+A[5,4]<- SYFreturnrate
 
-A[4,4]<-0.23
+A[5,5]<- ASYFreturnrate
+A
 #Should both be true!
 is.matrix_irreducible(A) 
 #YAY
 is.matrix_ergodic(A)
-!YAY
+#YAY
 
 #N0 is the initial population sizes. 
 #I will set time 0 to be 1976, before breeding begins. There were 54 nests, so 54 females. Really this should be checked. There could have been floaters too but I won't know that. 
-N0 <- c(0, 0, 0, 54)
+N0 <- c(0, 0,0, 16, 38)
 
 p<- pop.projection(A=A, n=N0, iterations=42)
 p
@@ -275,24 +288,46 @@ plot(p2 )
 
 eigA <- eigen.analysis(A)
 eigA
-#We are most sensetive to changes in the recruitment rate
-#Elasticity is highest in the fledging and recritment rate. For a 1% change, we will have a 20.4% change in lambda for both of these
+#We are most sensetive to changes in the recruitment rate Elasticity is highest
+#in the ASY retrun but very similar for hatch, fledge and recruitment. For a 1%
+#change, we will have a 17% change in lambda for ASY return and a 16% change for
+#the others
 
 
-return<- seq(from=0.01, to= 0.7, by=0.01)
+recruitval<- seq(from=0.01, to= 0.7, by=0.01)
 
 lam <- c()
 A2 <- A
 i=0
-for (returnrate in return){
+for (recruitment in recruitval){
   i=i+1
-  A2[4,4]<- returnrate
+  A2[4,3]<- recruitment
   p2 <- pop.projection(A2, N0, 50)
   lam[i]<- p2$lambda
 }
 lam
 
-plot(lam~return, ylab="Population growth rate", xlab="Adult Return")
+plot(lam~recruitval, ylab="Population growth rate", xlab="Recruitment")
 abline(h=1, col="red")
 
-#Even with the assumption that all birds get one nest per year we still are having trouble. I think this is maybe 
+#Need to have about 67% return to have a stable population like this! That's
+#pretty unreasonable....Perhaps I'm doing something else super wrong
+
+
+
+ASYreturnval<- seq(from=0.01, to= 1, by=0.01)
+
+lam <- c()
+A2 <- A
+i=0
+for (ASYreturn in ASYreturnval){
+  i=i+1
+  A2[5,5]<- ASYreturn
+  p2 <- pop.projection(A2, N0, 50)
+  lam[i]<- p2$lambda
+}
+lam
+
+plot(lam~ASYreturnval, ylab="Population growth rate", xlab="Adult Return")
+abline(h=1, col="red")
+#need almost 98% return of ASY to have a stable population....
