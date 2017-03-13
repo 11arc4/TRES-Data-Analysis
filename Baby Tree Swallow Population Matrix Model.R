@@ -3,6 +3,11 @@ library(dplyr)
 library(popdemo)
 library(popbio)
 
+
+#We are only including birds who were part of the breeding population
+
+
+
 #Calculate the average number of nests a bird is involved in 
 nestsinyear <- rep(NA, length(as.list(globalData$birds)))
 year <- rep(NA, length(as.list(globalData$birds)))
@@ -15,18 +20,19 @@ for(bird in as.list(globalData$birds)){
   #if a bird was seen as a nestling BUT was seen in multiple years or the bird wasn't a nestling
   if((!is.na(bird$hatchnest$m_key) & bird$yearsSeen$length>1)| is.na(bird$hatchnest$m_key)){
     for(year in bird$yearsSeen$as.list()){
-      a=a+1
-      if(is.na(year$hatchNest$m_key)){
-        reprod$nestsinyear[a]<- year$nest$length
-        reprod$age[a] <- year$age
-        reprod$sex[a] <- bird$sex
-        reprod$birdband[a] <- bird$bandID
-        reprod$year[a]<- year$year
+      if(year$nest$length>0){
+        a=a+1
+        if(is.na(year$hatchNest$m_key)){
+          reprod$nestsinyear[a]<- year$nest$length
+          reprod$age[a] <- year$age
+          reprod$sex[a] <- bird$sex
+          reprod$birdband[a] <- bird$bandID
+          reprod$year[a]<- year$year
+        }
+        
       }
       
     }
-    
-    
   }
 }
 reprod <- reprod[1:a,]
@@ -51,11 +57,12 @@ clutch<- rep(NA, length(as.list(globalData$nests)))
 hatch <- rep(NA, length(as.list(globalData$nests)))
 fledge <- rep(NA, length(as.list(globalData$nests)))
 FAge <- rep(NA, length(as.list(globalData$nests)))
+FBand <- rep(NA, length(as.list(globalData$nests)))
 year <- rep(NA, length(as.list(globalData$nests)))
 Mrecruits <- rep(0, length(as.list(globalData$nests)))
 Frecruits <- rep(0, length(as.list(globalData$nests)))
 Urecruits <- rep(0, length(as.list(globalData$nests)))
-parameters <- data.frame(clutch, hatch, fledge, FAge, year, Mrecruits, Frecruits, Urecruits)
+parameters <- data.frame(clutch, hatch, fledge, FBand, FAge, year, Mrecruits, Frecruits, Urecruits)
 
 i=0
 for(nest in as.list(globalData$nests)){
@@ -65,21 +72,25 @@ for(nest in as.list(globalData$nests)){
   parameters$fledge[i] <- nest$fledgeSize
   parameters$year[i]<- nest$year
   if (!is.na(nest$femaleID$m_key)){
-    message("Known female", nest$femaleID$m_key)
+    #message("Known female", nest$femaleID$m_key)
+    
     bird <- get(nest$femaleID$m_key, globalData$birds)
     for (year in bird$yearsSeen$as.list()){
       if(nest$year==year$year){
         parameters$FAge[i]<- year$age
+        parameters$FBand[i]<- bird$bandID
       }
     }
   }
-  #THis part most definitely isn't working right now. I will need to fuss (says only 6 individuals ever recruited and that's a lie)
   if(nest$nestlings$length>0){
     for(nestlingEnvP in nest$nestlings$as.list()){
       nestling <- get(nestlingEnvP$m_key, globalData$nestlings)
       if(!is.na(nestling$nestlingTRES$m_key)){
         adult <- get(nestling$nestlingTRES$m_key, globalData$birds)
         if(adult$yearsSeen$length>1){
+          if(adult$nestList$length>0){
+            message("Joined breeding population ", adult$bandID)
+          }
           if(adult$sex=="M"){
             parameters$Mrecruits[i] <- parameters$Mrecruits[i] +1
             
@@ -146,52 +157,17 @@ fledgerateASY <- mean(fledgeParASY$fledge/fledgeParASY$hatch) #0.6234409
 #Estimate recruitment
 ###THIS IS ALL MESSED UP NOW-- ESIMATING WRONG
 recruitPar <- parameters %>% filter(fledge>0 )
-recruitrate <- mean((recruitPar$Mrecruits + recruitPar$Frecruits+ recruitPar$Urecruits)/recruitPar$fledge) #0.02039224
+recruitrate <- mean((recruitPar$Mrecruits + recruitPar$Frecruits+ recruitPar$Urecruits)/recruitPar$fledge) #0.01979139
 
 
 #Does it differ by SY and ASY
-recruitParSY <- parameters %>% filter(fledge>0 & !is.na(recruits) & FAge == "SY" )
-recruitrateSY <- mean(recruitParSY$Mrecruits+ recruitParSY$/recruitParSY$fledge) #0.01605744
+recruitParSY <- parameters %>% filter(fledge>0 &  FAge == "SY" )
+recruitrateSY <- mean((recruitParSY$Mrecruits+ recruitParSY$Urecruits + recruitParSY$Frecruits)/recruitParSY$fledge) #0.0154047
 
-recruitParASY <- parameters %>% filter(fledge>0 & !is.na(recruits) & FAge != "SY" & !is.na(FAge))
-recruitrateASY <- mean(recruitParASY$recruits/recruitParASY$fledge) #0.02314319
+recruitParASY <- parameters %>% filter(fledge>0 &  FAge != "SY" & !is.na(FAge))
+recruitrateASY <- mean((recruitParASY$Mrecruits+ recruitParASY$Frecruits +recruitParASY$Urecruits)/recruitParASY$fledge) #0.02253803
 
 #OH shit wow it really does!
-
-
-#Yay! Now we just needd estimates of recruitment and return!
-totalnestlings <- 0
-recruit<- rep(NA, length(as.list(globalData$nestlings)))
-sex <- rep(NA, length(as.list(globalData$nestlings)))
-Recruit <- data.frame(recruit, sex)
-for(nestling in as.list(globalData$nestlings)){
-  totalnestlings <- totalnestlings + 1
-  if(is.na(nestling$nestlingTRES$m_key)){
-    Recruit$recruit[totalnestlings] <- 0
-    
-  } else {
-    adultbird <- get(nestling$nestlingTRES$m_key, nestling$nestlingTRES$m_hash)
-    if (adultbird$yearsSeen$length>1){
-      Recruit$recruit[totalnestlings] <- 1
-      Recruit$sex[totalnestlings] <- adultbird$sex
-    } else {
-      Recruit$recruit[totalnestlings] <- 0
-    }
-  }
-}
-
-#Divide the number of recruits by the total number of fledgelings
-recruitrateoffledgelings <- sum(Recruit$recruit)/sum(parameters$fledge, na.rm=T) #0.02480715
-#I"m assuming that they fledge at the same rates but perhaps recruit at different rates
-
-nrow(Recruit %>% filter(sex=="M")) #112 male recruits
-nrow(Recruit %>% filter(sex=="F")) #155 female recruits
-#Would this be drivin by the fact that we catch more of the females than the
-#males? I don't really think so because I'm pretty sure that they'd make sure to
-#catch any banded birds
-
-recruitofMfledgelings <- recruitrateoffledgelings * 112/ (112+155)
-recruitofFfledgelings <- recruitrateoffledgelings * 155/ (112+155)
 
 
 
