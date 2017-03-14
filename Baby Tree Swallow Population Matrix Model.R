@@ -338,4 +338,42 @@ abline(h=1, col="red")
 
 
 
+#Let's rerun this analysis using the 1976 recruitment rate
 
+A2 <- matrix(0, nrow=5, ncol=5, dimnames = list(stages, stages))
+
+A2[1,4] <- layrateSY / 2 #(because we assume half will be male)
+A2[1,5] <- layrateASY / 2 #(because we assume half will be male)
+#Now I know that hatch, fledge and recruitment differs a bit between SY and ASY
+#female's nests but I don't know how to deal with this right now. 
+A2[2,1]<- hatchrate
+A2[3,2]<- fledgerate
+A2[4,3] <-  0.1316531 #1976 recruitment rate
+A2[5,4]<- SYFreturnrate
+
+A2[5,5]<- ASYFreturnrate
+A2
+is.matrix_irreducible(A2) 
+is.matrix_ergodic(A2)
+#good to go
+
+p2<- pop.projection(A=A2, n=N0, iterations=42) #same initial population as before
+p2
+#Plot when the tree swallows will stabilize
+par(mar=c(2.5, 2.5, 0.5, 0.5))
+stage.vector.plot(stage.vectors = p2$stage.vectors, col=2:4, mgp=c(1.2,0.4, 0)) #Oh wow this looks super different than before
+
+#Plot how the tree swallow population change stabilizes
+lambda2 <- p2$pop.changes
+time <- c(2:42)
+plot(lambda2~time)
+
+#Population size over time
+p2 <- project(A=A, vector=N0, time=42)
+plot(p2 )
+#Not lets do an eigen analysis
+
+eigA2 <- eigen.analysis(A2)
+eigA2
+#We are still most sensitive to recruitment of fledgelings, but elasticity is
+#now equal between hatching, fledging and recruitment
