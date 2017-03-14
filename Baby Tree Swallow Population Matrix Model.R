@@ -49,7 +49,7 @@ meanclutchesASYF <- mean(ASYFreprod$nestsinyear, na.rm=T) #1.074427
 
 #mean number of nests per male
 Mreprod <- reprod%>% filter(sex=="M")
-mean(Mreprod$nestsinyear, na.rm = T) #1.091163
+meanclutchesM <- mean(Mreprod$nestsinyear, na.rm = T) #1.091163
 ######################################################################################
 
 #Now calculate average clutch size, hatch size, and fledge success.
@@ -118,6 +118,8 @@ for(nest in as.list(globalData$nests)){
 #removed these three nests where we are getting infinite clutch size because
 #they had no eggs but a nestling was transfered in
 parameters <- parameters [-c(which(parameters$hatch>parameters$clutch & parameters$clutch==0)), ]
+
+
 parametersSYF <- parameters %>% filter(FAge=="SY")
 parametersASYF <- parameters %>% filter(FAge!="SY" & !is.na(FAge))
  #Mean clutch size
@@ -157,7 +159,6 @@ fledgerateASY <- mean(fledgeParASY$fledge/fledgeParASY$hatch) #0.6239397
 
 
 #Estimate recruitment
-###THIS IS ALL MESSED UP NOW-- ESIMATING WRONG
 recruitPar <- parameters %>% filter(fledge>0 )
 recruitrate <- mean((recruitPar$Mrecruits + recruitPar$Frecruits+ recruitPar$Urecruits)/recruitPar$fledge) #0.0175883
 #This is likely an underestimate because we don't catch all the birds every year--how do I correct for that?
@@ -251,7 +252,10 @@ A[1,5] <- layrateASY / 2 #(because we assume half will be male)
 #female's nests but I don't know how to deal with this right now. 
 A[2,1]<- hatchrate
 A[3,2]<- fledgerate
-A[4,3] <- recruitrate #this is likely an underestimate still because we haven't corrected for effort yet!
+A[4,3] <-  0.03404637
+#I've stolen this number as the mean female recruitment rate after correcting for
+#effort to catch males and females each year (See Effect of Adult Catch Effort
+#on Recruitment file) I will also want to rerun the analaysis using the return rate from 1976 (0.1316531)
 A[5,4]<- SYFreturnrate
 
 A[5,5]<- ASYFreturnrate
@@ -288,13 +292,11 @@ plot(p2 )
 
 eigA <- eigen.analysis(A)
 eigA
-#We are most sensetive to changes in the recruitment rate Elasticity is highest
-#in the ASY retrun but very similar for hatch, fledge and recruitment. For a 1%
-#change, we will have a 17% change in lambda for ASY return and a 16% change for
-#the others
+#We are most sensetive to changes in the recruitment rate. NO surprize there! Elasticity 
+#is highest for return rate and hatch success (1% change in either will result in a 20% change in lambda)
 
 
-recruitval<- seq(from=0.01, to= 0.7, by=0.01)
+recruitval<- seq(from=0.01, to= 1, by=0.01)
 
 lam <- c()
 A2 <- A
@@ -315,19 +317,25 @@ abline(h=1, col="red")
 
 
 
-ASYreturnval<- seq(from=0.01, to= 1, by=0.01)
+hatchsuccess<- seq(from=0.01, to= 1, by=0.01)
 
 lam <- c()
 A2 <- A
 i=0
-for (ASYreturn in ASYreturnval){
+for (h in hatchsuccess){
   i=i+1
-  A2[5,5]<- ASYreturn
+  A2[2,1]<- h
   p2 <- pop.projection(A2, N0, 50)
   lam[i]<- p2$lambda
 }
 lam
 
-plot(lam~ASYreturnval, ylab="Population growth rate", xlab="Adult Return")
+plot(lam~hatchsuccess, ylab="Population growth rate", xlab="Hatch Success")
 abline(h=1, col="red")
-#need almost 98% return of ASY to have a stable population....
+#changing hatchsuccess won't actually allow us to ever have a stable population (hatch success can't get over 1....)
+
+
+
+
+
+
