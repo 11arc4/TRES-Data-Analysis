@@ -10,11 +10,12 @@ birdsSeenMissingYears <- 0
 
 years<- seq(from=1975, to=2016, by=1)
 BirdsSeen<- data.frame(years)
-BirdsSeen$AdultsSeen <- rep(0, length(BirdsSeen$years)) #number of adults we caught that year
-BirdsSeen$FAdultsSeen <- rep(0, length(BirdsSeen$years)) #number of adults we caught that year
-BirdsSeen$MAdultsSeen <- rep(0, length(BirdsSeen$years)) #number of adults we caught that year
+BirdsSeen$AdultsSeen <- rep(0, length(BirdsSeen$years)) #number of breeding adults we caught that year
+BirdsSeen$FAdultsSeen <- rep(0, length(BirdsSeen$years)) #number of breeding adults we caught that year
+BirdsSeen$MAdultsSeen <- rep(0, length(BirdsSeen$years)) #number of breeding adults we caught that year
 
 BirdsSeen$NestlingsFledged <- rep(0, length(BirdsSeen$years)) #number of nestlings fledged
+
 BirdsSeen$AdultsUnseen <- rep(0, length(BirdsSeen$years))
 #number of adults we know were there because they returned but were not caught that year!
 BirdsSeen$FAdultsUnseen <- rep(0, length(BirdsSeen$years))
@@ -28,6 +29,11 @@ BirdsSeen$FirstNests <- rep(0, length(BirdsSeen$years))
 BirdsSeen$MaleRenests <- rep(0, length(BirdsSeen$years))
 BirdsSeen$FemaleRenests <- rep(0, length(BirdsSeen$years))
 BirdsSeen$Renests <- rep(0, length(BirdsSeen$years))
+
+
+BirdsSeen$FloaterNumbers <- rep(0, length(BirdsSeen$years)) #number of nonbreeding adults caught that year
+BirdsSeen$MFloaterNumbers <- rep(0, length(BirdsSeen$years))
+BirdsSeen$FFloaterNumbers <- rep(0, length(BirdsSeen$years))
 
 #Use this to calculate how many adults we probably should have had in more detail
 
@@ -50,13 +56,29 @@ for (bird in as.list(globalData$birds)){
         }
         
       } else {
-        BirdsSeen$AdultsSeen[a] <- BirdsSeen$AdultsSeen[a]+1
+        if(year$nest$length==0){
+          BirdsSeen$FloaterNumbers[a]<- BirdsSeen$FloaterNumbers[a]+1
+          
+        } else {
+          BirdsSeen$AdultsSeen[a]<- BirdsSeen$AdultsSeen[a]+1
+        }
         if(bird$sex=="F"){
-          BirdsSeen$FAdultsSeen[a] <- BirdsSeen$FAdultsSeen[a]+1
+          if(year$nest$length>0){
+            BirdsSeen$FAdultsSeen[a] <- BirdsSeen$FAdultsSeen[a]+1
+          } else {
+            BirdsSeen$FFloaterNumbers[a]<- BirdsSeen$FFloaterNumbers[a]+1
+            
+          }
         }
         if(bird$sex=="M"){
-          BirdsSeen$MAdultsSeen[a] <- BirdsSeen$MAdultsSeen[a]+1
+          if(year$nest$length>0){
+            BirdsSeen$MAdultsSeen[a] <- BirdsSeen$MAdultsSeen[a]+1
+          } else {
+            BirdsSeen$MFloaterNumbers[a]<-BirdsSeen$MFloaterNumbers[a]+1
+          }
         }
+        
+        
       }
       
       
@@ -79,6 +101,31 @@ for (bird in as.list(globalData$birds)){
             
           }
         }
+      }
+    }
+    
+  } else {
+    #Bird was only seen once so they just get added into the adults seen from that year if they're an adult
+    year<-bird$yearsSeen$as.list()[[1]]
+    if(year$nest$length==0){
+      BirdsSeen$FloaterNumbers[a]<- BirdsSeen$FloaterNumbers[a]+1
+      
+    }else {
+      BirdsSeen$AdultsSeen[a]<- BirdsSeen$AdultsSeen[a]+1
+    }
+    if(bird$sex=="F"){
+      if(year$nest$length>0){
+        BirdsSeen$FAdultsSeen[a] <- BirdsSeen$FAdultsSeen[a]+1
+      } else {
+        BirdsSeen$FFloaterNumbers[a]<- BirdsSeen$FFloaterNumbers[a]+1
+        
+      }
+    }
+    if(bird$sex=="M"){
+      if(year$nest$length>0){
+        BirdsSeen$MAdultsSeen[a] <- BirdsSeen$MAdultsSeen[a]+1
+      } else {
+        BirdsSeen$MFloaterNumbers[a]<-BirdsSeen$MFloaterNumbers[a]+1
       }
     }
     
@@ -112,11 +159,12 @@ for (nest in as.list(globalData$nests)){
 
 
 #Calculate how many birds we think we aren't seeing each year
-BirdsSeen$EstimatePop <-  BirdsSeen$FirstNests*2 +BirdsSeen$MaleRenests+BirdsSeen$FemaleRenests
-BirdsSeen$FEstimatePop <- BirdsSeen$FirstNests+ BirdsSeen$MaleRenests
-BirdsSeen$MEstimatePop <- BirdsSeen$FirstNests+ BirdsSeen$FemaleRenests
+BirdsSeen$EstimatePop <-  BirdsSeen$FirstNests*2 +BirdsSeen$MaleRenests+BirdsSeen$FemaleRenests +BirdsSeen$FloaterNumbers
+BirdsSeen$FEstimatePop <- BirdsSeen$FirstNests+ BirdsSeen$MaleRenests +BirdsSeen$FFloaterNumbers
+BirdsSeen$MEstimatePop <- BirdsSeen$FirstNests+ BirdsSeen$FemaleRenests +BirdsSeen$MFloaterNumbers
+
+#Use those numbers to guess at how many birds we didn't see
 BirdsSeen$AdultsUnknown<- BirdsSeen$EstimatePop- BirdsSeen$AdultsSeen -BirdsSeen$AdultsUnseen
-#This isn't really a good measurement because it's not taking into account that some of these are probably renests!
 BirdsSeen$FAdultsUnknown<- BirdsSeen$FEstimatePop - BirdsSeen$FAdultsSeen-BirdsSeen$FAdultsUnseen
 BirdsSeen$MAdultsUnknown<- BirdsSeen$MEstimatePop - BirdsSeen$MAdultsSeen- BirdsSeen$MAdultsUnseen
 
@@ -159,7 +207,7 @@ names(BirdsSeen2) <- c("years", "howKnown", "number")
 BirdsSeen2 <- BirdsSeen2 %>% filter(howKnown=="AdultsSeen" |
                                       howKnown=="AdultsUnseen" |
                                       howKnown=="AdultsUnknown")
-g
+
 ggplot(BirdsSeen2,aes(x = years, y = number, fill = howKnown)) + 
   geom_bar(stat = "identity", show.legend = T) + 
   xlab("Year")+
@@ -199,7 +247,6 @@ ggplot(BirdsSeen2M,aes(x = years, y = number, fill = howKnown)) +
                       breaks=c("MAdultsSeen", "MAdultsUnseen", "MAdultsUnknown"),
                       labels=c("Caught & known ID", "Caught previously & unknown ID", " Not caught & unknown ID" ))
 
-#We know a fair bit about the adult females each year (~50% are known for each year) but the males are definitely more of a mystery!!
 
 
 
@@ -227,11 +274,11 @@ BirdsSeen$EstimatedRecruitM <- BirdsSeen$RecruitedNestlings*proportMRecruit * Bi
 BirdsSeen$EstimatedRecruitM[which(BirdsSeen$EstimatedRecruitM==Inf)]<- NA
 
 BirdsSeen$Frecruitmentrate <- BirdsSeen$EstimatedRecruitF/(BirdsSeen$NestlingsFledged/2)
-mean(BirdsSeen$Frecruitmentrate) #0.03404637 this is a number I may want to use in my population matrix!
-BirdsSeen$Frecruitmentrate[2] #0.1316531 this is recruitment in 1976, might want to use this too!
+mean(BirdsSeen$Frecruitmentrate) #0.08936758
+BirdsSeen$Frecruitmentrate[2] 
 
 BirdsSeen$Mrecruitmentrate <- BirdsSeen$EstimatedRecruitM/(BirdsSeen$NestlingsFledged/2)
-mean(BirdsSeen$Mrecruitmentrate, na.rm=T) #0.04082002
+mean(BirdsSeen$Mrecruitmentrate, na.rm=T) #0.1162657
 
 ggplot(BirdsSeen, aes(x=years, y=Frecruitmentrate))+
   geom_point()+
@@ -249,3 +296,12 @@ ggplot(BirdsSeen, aes(x=years, y=Mrecruitmentrate))+
   geom_smooth()+
   xlab("Year Surveyed")+
   ylab("Male Recruitment Rate")
+
+
+
+#How do floaters do over the years? 
+ggplot(BirdsSeen, aes(x=years, y=FloaterNumbers))+
+  geom_point()+
+  xlab("Year Surveyed")+
+  ylab("Adults without known nests")+
+  geom_smooth()
