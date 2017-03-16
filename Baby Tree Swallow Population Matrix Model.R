@@ -252,10 +252,10 @@ A[1,5] <- layrateASY / 2 #(because we assume half will be male)
 #female's nests but I don't know how to deal with this right now. 
 A[2,1]<- hatchrate
 A[3,2]<- fledgerate
-A[4,3] <-  0.03404637
+A[4,3] <-  0.08936758
 #I've stolen this number as the mean female recruitment rate after correcting for
 #effort to catch males and females each year (See Effect of Adult Catch Effort
-#on Recruitment file) I will also want to rerun the analaysis using the return rate from 1976 (0.1316531)
+#on Recruitment file) 
 A[5,4]<- SYFreturnrate
 
 A[5,5]<- ASYFreturnrate
@@ -284,7 +284,8 @@ plot(lambda~time, ylab="Population growth", xlab="Years after grid establishment
 
 #Plot how the population changes over time
 p2 <- project(A=A, vector=N0, time=42)
-plot(p2 )
+plot(p2)
+title(xlab="Years", ylab="Female Populaiton Size")
 
 
 
@@ -335,45 +336,3 @@ abline(h=1, col="red")
 #changing hatchsuccess won't actually allow us to ever have a stable population (hatch success can't get over 1....)
 
 
-
-
-
-#Let's rerun this analysis using the 1976 recruitment rate
-
-A2 <- matrix(0, nrow=5, ncol=5, dimnames = list(stages, stages))
-
-A2[1,4] <- layrateSY / 2 #(because we assume half will be male)
-A2[1,5] <- layrateASY / 2 #(because we assume half will be male)
-#Now I know that hatch, fledge and recruitment differs a bit between SY and ASY
-#female's nests but I don't know how to deal with this right now. 
-A2[2,1]<- hatchrate
-A2[3,2]<- fledgerate
-A2[4,3] <-  0.1316531 #1976 recruitment rate
-A2[5,4]<- SYFreturnrate
-
-A2[5,5]<- ASYFreturnrate
-A2
-is.matrix_irreducible(A2) 
-is.matrix_ergodic(A2)
-#good to go
-
-p2<- pop.projection(A=A2, n=N0, iterations=42) #same initial population as before
-p2
-#Plot when the tree swallows will stabilize
-par(mar=c(2.5, 2.5, 0.5, 0.5))
-stage.vector.plot(stage.vectors = p2$stage.vectors, col=2:4, mgp=c(1.2,0.4, 0)) #Oh wow this looks super different than before
-
-#Plot how the tree swallow population change stabilizes
-lambda2 <- p2$pop.changes
-time <- c(2:42)
-plot(lambda2~time)
-
-#Population size over time
-p2 <- project(A=A, vector=N0, time=42)
-plot(p2 )
-#Not lets do an eigen analysis
-
-eigA2 <- eigen.analysis(A2)
-eigA2
-#We are still most sensitive to recruitment of fledgelings, but elasticity is
-#now equal between hatching, fledging and recruitment
