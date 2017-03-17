@@ -88,7 +88,7 @@ A
 is.matrix_irreducible(A)
 is.matrix_ergodic(A)
 #Nice still all good
-
+N0 <- (0,0,16,38)
 #project the population for 42 years (course of our study system)
 p <- pop.projection(A=A, n=N0, iterations=42)
 p
