@@ -53,6 +53,7 @@ meanclutchesM <- mean(Mreprod$nestsinyear, na.rm = T) #1.091163
 ######################################################################################
 
 #Now calculate average clutch size, hatch size, and fledge success.
+firsteggdate<- rep(NA, length(as.list(globalData$nests)))
 clutch<- rep(NA, length(as.list(globalData$nests)))
 hatch <- rep(NA, length(as.list(globalData$nests)))
 fledge <- rep(NA, length(as.list(globalData$nests)))
@@ -62,12 +63,13 @@ year <- rep(NA, length(as.list(globalData$nests)))
 Mrecruits <- rep(0, length(as.list(globalData$nests)))
 Frecruits <- rep(0, length(as.list(globalData$nests)))
 Urecruits <- rep(0, length(as.list(globalData$nests)))
-parameters <- data.frame(clutch, hatch, fledge, FBand, FAge, year, Mrecruits, Frecruits, Urecruits)
+parameters <- data.frame(firsteggdate, clutch, hatch, fledge, FBand, FAge, year, Mrecruits, Frecruits, Urecruits)
 
 i=0
 for(nest in as.list(globalData$nests)){
   i=i+1
   parameters$clutch[i] <- nest$clutchSize
+  parameters$firsteggdate[i]<- nest$firstEggDate
   parameters$hatch[i] <- nest$hatchSize
   parameters$fledge[i] <- nest$fledgeSize
   parameters$year[i]<- nest$year
@@ -136,6 +138,8 @@ layrateF <- meanClutchSize * meanclutchesF #5.623868
 #Mean layrate by age of female
 layrateSY <- meanClutchSizeSYF * meanclutchesSYF #5.123011
 layrateASY <- meanclutchSizeASYF * meanclutchesASYF #5.865897
+
+
 
 #Can only calculate hatchrate for clutches laid-- already dealt with above though
 hatchPar <- parameters %>% filter(!is.na(hatch) & clutch>0)
@@ -233,6 +237,13 @@ Mreturnrate <- nrow(Adults %>% filter (returnstatus=="returned" & sex=="M")) /
 #0.2739166
 #Oh look at that! Males return about like a ASY female. That makes sense in relation to everyone else. 
 
+
+#Need mean dates for laying eggs!
+meanfirsteggdate <- mean (parameters$firsteggdate, na.rm=T) #140.1392
+SYparameters <- parameters%>% filter (FAge=="SY")
+meanSYfirsteggdate <- mean(SYparameters$firsteggdate, na.rm=T) #143.4294
+ASYparameters <- parameters%>% filter (FAge!="SY" & !is.na(FAge))
+meanASYfirsteggdate <- mean(ASYparameters$firsteggdate, na.rm=T) #138.2539
 
 
 ##########################################################
