@@ -17,9 +17,13 @@ ASYLayrate <- 5.865897 / 2 #Only half will be female
 #about egg to nestlings and nestling to fledgeling?
 daystohatch <- c()
 daystofledge<- c()
-
+dayFirstEgg <- c()
 for (nest in as.list(globalData$nests)){
+  if(!is.na(nest$firstEggDate)){
+    dayFirstEgg[length(dayFirstEgg)+1]<- nest$firstEggDate
+  }
   if(!is.na(nest$hatchDate) & !is.na(nest$lastEggDate) & !is.na(nest$hatchSize)){
+    
     if(nest$hatchSize>0){
       daystohatch[length(daystohatch) + 1] <- nest$hatchDate - nest$lastEggDate
       
@@ -34,6 +38,10 @@ for (nest in as.list(globalData$nests)){
   
   
 }
+mean(dayFirstEgg) #usually have eggs on day 140
+
+
+
 eggtonestlingstime <- mean(daystohatch) #14.17244
 nestlingstofledgelingtime <- mean(daystofledge) #19.6886
 hist(daystofledge, breaks=100)
@@ -43,14 +51,15 @@ hist(daystofledge, breaks=100)
 #mean wait time = 1/(probability of success)
 
 
-meanwaitasnestling <- nestlingstofledgelingtime/eggtonestlingstime #1.177838
-pstaynestling <- 1-  1/meanwaitasnestling #0.1509868
+meanwaitasnestling <- nestlingstofledgelingtime/eggtonestlingstime #1.389217
+pstaynestling <- 1-  1/meanwaitasnestling #0.2801702
 
 meanwaitFledgeandAdult <- 365/eggtonestlingstime #25.84815
 pstayfledgeandadult <- 1- 1/meanwaitFledgeandAdult #0.9613125
 
 
-ASYreturnholdcombined <- 1-ASYFreturnrate/meanwaitFledgeandAdult #instead of having a 1 chance of making it through you only have part of a change of success!
+ASYreturnholdcombined <- 1-ASYFreturnrate/meanwaitFledgeandAdult 
+#instead of having a 1 chance of making it through you only have part of a change of success!
   
 
 
