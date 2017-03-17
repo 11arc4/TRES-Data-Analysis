@@ -1,8 +1,31 @@
 #How have immigration rates changed over the years?
 #This entire set of calculations is only including the breeding population--not looking at floaters!
-years<- seq(from=1975, to=2016, by=1)
-Immigration <- data.frame(years)
+outerdir<-"~/Masters Thesis Project/Tree Swallow Data/Amelia TRES data 1975-2016"
 
+BoxesAndTerritories<- read.csv(paste(outerdir, "Box Occupancy 1975-2016.csv", sep="/"), 
+                               as.is=TRUE, na.strings = c("", "NA"))
+rownames(BoxesAndTerritories)<-BoxesAndTerritories$Year
+BoxesAndTerritories<- subset(BoxesAndTerritories, select= -c(Year))
+Box_rows<- which(grepl("Box", row.names(BoxesAndTerritories)))
+Boxes <- BoxesAndTerritories[Box_rows,]
+Terr_rows <- which(grepl("Territory", row.names(BoxesAndTerritories)))
+Terr <- BoxesAndTerritories[Terr_rows,]
+
+
+
+years<- seq(from=1975, to=2016, by=1)
+
+Immigration <- data.frame(years)
+Immigration$TotalBoxes <- c()
+for(y in 1:ncol(Boxes)){
+  Immigration$TotalBoxes[y] <- sum(Boxes[,y], na.rm = T)
+    
+}
+Immigration$TotalTerr <- c()
+for(y in 1:ncol(Terr)){
+  Immigration$TotalTerr[y] <- sum(Terr[,y], na.rm = T)
+  
+}
 Immigration$NewBirdsCaught <- rep(0, length(Immigration$years))
 Immigration$NewFemalesCaught <- rep(0, length(Immigration$years))
 Immigration$NewSYFemalesCaught <- rep(0, length(Immigration$years))
@@ -362,3 +385,29 @@ ggplot(Immigration_NewFemales, aes(x=year, y=number, fill=age))+
                       labels=c("ASY", "SY"))+
   xlab("Year")+
   ylab("Proportion of New Females")
+
+
+
+#does box availability precict new birds?
+Immigration$AvailableBirdSpaces <- 2*Immigration$TotalBoxes-Immigration$EstimateRecruitBirds- Immigration$EstimateReturnBirds
+Immigration$AvailableFemaleSpaces <- Immigration$TotalBoxes- Immigration$EstimateReturnFemales - Immigration$EstimateRecruitFemales
+Immigration$AvailableMaleSpaces <- Immigration$TotalBoxes - Immigration$EstimateRecruitMales- Immigration$EstimateReturnMales
+#How does the available boxes influence immigration rates?
+#I've included the years that NES was present between two vertical lines
+ggplot(Immigration, aes(y=EstimateNewBirds/AvailableBirdSpaces, x=years))+
+  geom_point()+
+  geom_vline(xintercept=1981)+
+  geom_vline(xintercept=1998)
+#Huh it really really looks like NES brought in the birds at a higher rate, but
+#otherwise it was pretty stable....
+
+ggplot(Immigration, aes(y=EstimateNewFemales/AvailableFemaleSpaces, x=years))+
+  geom_point()+
+  geom_vline(xintercept=1981)+
+  geom_vline(xintercept=1998)
+#Yup we're seeing the same thing for the females alone...
+
+ggplot(Immigration, aes(y=EstimateNewMales/AvailableMaleSpaces, x=years))+
+  geom_point()+
+  geom_vline(xintercept=1981)+
+  geom_vline(xintercept=1998)
