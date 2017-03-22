@@ -54,6 +54,7 @@ hist(daystofledge, breaks=100)
 meanwaitasnestling <- nestlingstofledgelingtime/eggtonestlingstime #1.389217
 pstaynestling <- 1-  1/meanwaitasnestling #0.2801702
 
+
 meanwaitFledgeandAdult <- 365/eggtonestlingstime #25.84815
 pstayfledgeandadult <- 1- 1/meanwaitFledgeandAdult #0.9613125
 

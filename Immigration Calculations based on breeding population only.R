@@ -1,5 +1,8 @@
 #How have immigration rates changed over the years?
 #This entire set of calculations is only including the breeding population--not looking at floaters!
+library(dplyr)
+library(ggplot2)
+
 outerdir<-"~/Masters Thesis Project/Tree Swallow Data/Amelia TRES data 1975-2016"
 
 BoxesAndTerritories<- read.csv(paste(outerdir, "Box Occupancy 1975-2016.csv", sep="/"), 
@@ -356,6 +359,85 @@ plot(mod)
 hist(resid(mod, type="pearson"))
 
 
+#Does Return and recruiting bird population estimate predict new birds? (IE are
+#they using conspecific attraction to attrach ner birds?)
+Immigration$PreviouslySeenBirds <- Immigration$EstimateReturnBirds+Immigration$EstimateRecruitBirds
+Immigration$PreviouslySeenFemales <- Immigration$EstimateReturnFemales+Immigration$EstimateRecruitFemales
+
+ggplot(data=Immigration, aes(x=(EstimateReturnBirds+EstimateRecruitBirds), y=EstimateNewBirds))+
+  geom_point()+
+  stat_smooth(method="lm")
+ggplot(data=Immigration, aes(x=(EstimateReturnFemales+EstimateRecruitFemales), y=EstimateNewFemales))+
+  geom_point()+
+  stat_smooth(method="lm")
+ggplot(data=Immigration, aes(x=(EstimateReturnMales+EstimateRecruitMales), y=EstimateNewMales))+
+  geom_point()+
+  stat_smooth(method="lm")
+
+#Oh that's gorgeous it does! That means I can use that line to
+#predict how many immigrants I have based on the total adults!
+ 
+immMod <- lm(EstimateNewBirds ~PreviouslySeenBirds, data= Immigration)
+plot(immMod)
+plot(resid(immMod, type="pearson")~Immigration$PreviouslySeenBirds) #No patterns
+hist(resid(immMod, type="pearson"))
+shapiro.test(resid(immMod, type="pearson")) #They're normal
+#This is a totally sufficient model
+
+#Let's also do the females since they're the birds I need for my matrix
+FimmMod <- lm(EstimateNewFemales ~PreviouslySeenFemales, data= Immigration)
+plot(FimmMod)
+plot(resid(FimmMod, type="pearson")~Immigration$PreviouslySeenFemales) #No patterns
+hist(resid(FimmMod, type="pearson"))
+shapiro.test(resid(FimmMod, type="pearson")) #They're not quite normal...... hmmmmm
+
+#What about the previous year's population? 
+#Does last years population size predict immigration?
+Immigration$LastYearEstimatePop<-c()
+Immigration$LastYearEstimateFPop<-c()
+Immigration$LastYearEstimateMPop<-c()
+for(i in 2:nrow(Immigration)){
+  Immigration$LastYearEstimatePop[i] <- Immigration$EstimatePop[i-1]
+  Immigration$LastYearEstimateFPop[i] <- Immigration$FEstimatePop[i-1]
+  Immigration$LastYearEstimateMPop[i] <- Immigration$MEstimatePop[i-1]
+  
+}
+
+
+ggplot( data= Immigration, aes(x=LastYearEstimatePop, y=EstimateNewBirds))+
+  geom_point()+
+  stat_smooth(method="lm")
+ggplot( data= Immigration, aes(x=LastYearEstimateFPop, y=EstimateNewFemales))+
+  geom_point()+
+  stat_smooth(method="lm")
+ggplot( data= Immigration, aes(x=LastYearEstimateMPop, y=EstimateNewMales))+
+  geom_point()+
+  stat_smooth(method="lm")
+#Yes last years population also predicts how many immigrants you are getting 
+
+immMod2 <- lm(EstimateNewBirds ~LastYearEstimatePop, data= Immigration)
+plot(immMod2)
+plot(resid(immMod2, type="pearson")~Immigration$LastYearEstimatePop[2:nrow(Immigration)]) #No patterns
+hist(resid(immMod2, type="pearson"))
+shapiro.test(resid(immMod2, type="pearson")) #normal
+
+#let's do the females 
+FimmMod2 <- lm(EstimateNewFemales ~LastYearEstimateFPop, data= Immigration)
+plot(FimmMod2) #fits pretty damn well
+hist(resid(FimmMod2, type="pearson"))
+shapiro.test(resid(FimmMod2, type="pearson")) #normal
+plot(resid(FimmMod2, type="pearson")~Immigration$LastYearEstimateFPop[2:nrow(Immigration)]) #No patterns
+
+
+
+#OK so both last years population and this years returning population predict immigration
+#compare the R^2 to see which model is better for my purposes
+summary(immMod) #0.3742 is adujusted r^2
+summary(immMod2) #0.522  so I should use immMod2!
+summary(FimmMod) #0.3923 
+summary(FimmMod2) #0.5143
+
+
 
 
 #Is there a difference between the immigration of females by age class?
@@ -363,29 +445,70 @@ hist(resid(mod, type="pearson"))
 ggplot(Immigration, aes(x=years, y=Value))+
   geom_point(aes(y=NewASYFemalesCaught), color="black")+
   geom_point(aes(y=NewSYFemalesCaught), color="grey")
+
 #Does look like there might be a ratio
-
-
-ggplot(Immigration, aes(x=years, y= 100 *NewASYFemalesCaught/(NewSYFemalesCaught+ NewASYFemalesCaught)))+
+ggplot( data= Immigration, aes(x=LastYearEstimateFPop, y=NewSYFemalesCaught, color=AvailableFemaleSpaces))+
   geom_point()+
-  geom_smooth()+
-  xlab("Year")+
-  ylab("Percent ASY immigrant females")
-##immigrants are more likely to be SY now than they used to be but I'm not sure if that's significnat
+  stat_smooth(method="lm")
+ggplot( data= Immigration, aes(x=years, y=NewSYFemalesCaught, color=AvailableFemaleSpaces))+
+  geom_point()+
+  stat_smooth(method="lm")
 
-Immigration_NewFemales <- Immigration2 %>% filter (returnStatus=="NewASYFemalesCaught"|
-                           returnStatus=="NewSYFemalesCaught")
-names(Immigration_NewFemales)<- c("year", "age", "number")
-ggplot(Immigration_NewFemales, aes(x=year, y=number, fill=age))+
-  geom_bar(stat="identity")
-ggplot(Immigration_NewFemales, aes(x=year, y=number, fill=age))+
-  geom_bar(stat="identity", position="fill")+
-  scale_fill_discrete(name="Female Age", 
-                      breaks=c("NewASYFemalesCaught","NewSYFemalesCaught" ), 
-                      labels=c("ASY", "SY"))+
-  xlab("Year")+
-  ylab("Proportion of New Females")
+ggplot( data= Immigration, aes(x=LastYearEstimateFPop, y=NewASYFemalesCaught, color=AvailableFemaleSpaces))+
+  geom_point()+
+  stat_smooth(method="lm")
 
+#We'd expect SY and ASY birds to be choosing based on the total population, not their particular age class I would imagine
+
+
+#Estimate SY and ASY new birds based on the ratios
+Immigration$EstimateSYFemales <- Immigration$EstimateNewFemales * Immigration$NewSYFemalesCaught/ (Immigration$NewASYFemalesCaught+Immigration$NewSYFemalesCaught)
+Immigration$EstimateASYFemales <- Immigration$EstimateNewFemales * Immigration$NewASYFemalesCaught/ (Immigration$NewASYFemalesCaught+Immigration$NewSYFemalesCaught)
+Immigration$years2 <- Immigration$years-1974 #rescale years so that it's on a normal scale
+
+
+plot(EstimateSYFemales~LastYearEstimateFPop, data=Immigration) #this looks constant
+plot(EstimateASYFemales~LastYearEstimateFPop, data=Immigration) #This will correlate
+
+
+IMM <- Immigration %>% filter (!is.na(LastYearEstimateFPop) & !is.nan(EstimateSYFemales))
+SYimmMod <- lm(EstimateSYFemales~years2 * LastYearEstimateFPop *AvailableFemaleSpaces, data=IMM)
+plot(SYimmMod)
+hist(resid(SYimmMod, type="pearson"))
+shapiro.test(resid(SYimmMod, type="pearson")) #normal
+plot(resid(SYimmMod, type="pearson")~IMM$LastYearEstimateFPop) #no pattern
+plot(resid(SYimmMod, type="pearson")~IMM$years2) #no pattern
+plot(resid(SYimmMod, type="pearson")~IMM$AvailableFemaleSpaces) #no pattern
+
+#This is a fine model
+summary(SYimmMod) 
+Anova(SYimmMod) 
+#Last year and the interaction between last year and what year you are is
+#signifcant--therefore there is a difference in how were immigrating over the
+#course of time!!---- slightly less SY immgration as the years go by!
+#simplify to only include imp terms
+SYimmMod2 <- lm(EstimateSYFemales~years2 + LastYearEstimateFPop + years2*LastYearEstimateFPop, data=IMM)
+summary(SYimmMod2) 
+
+
+
+IMM2 <- Immigration %>% filter (!is.na(LastYearEstimateFPop) & !is.nan(EstimateASYFemales))
+
+ASYimmMod <- lm(EstimateASYFemales~years2 * LastYearEstimateFPop*AvailableFemaleSpaces, data=IMM)
+plot(ASYimmMod) #pretty good!
+hist(resid(ASYimmMod, type="pearson"))
+shapiro.test(resid(ASYimmMod, type="pearson")) #not quite normal but it actually looks pretty decent on the histogram
+plot(resid(ASYimmMod, type="pearson")~IMM$LastYearEstimateFPop) #no pattern
+plot(resid(ASYimmMod, type="pearson")~IMM$years2) #no pattern
+plot(resid(ASYimmMod, type="pearson")~IMM$AvailableFemaleSpaces) #no pattern
+
+#This is a fine model
+summary(ASYimmMod) 
+Anova(ASYimmMod)
+#Last years population and the year are signifcant predictors of ASY new birds.
+#Similarly there is less ASY immigration in current years than in earlier years
+ASYimmMod2 <- lm(EstimateASYFemales~years2 + LastYearEstimateFPop +AvailableFemaleSpaces, data=IMM)
+summary(ASYimmMod2)
 
 
 #does box availability precict new birds?
