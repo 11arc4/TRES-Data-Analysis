@@ -14,7 +14,9 @@ BirdsSeen$AdultsSeen <- rep(0, length(BirdsSeen$years)) #number of breeding adul
 BirdsSeen$FAdultsSeen <- rep(0, length(BirdsSeen$years)) #number of breeding adults we caught that year
 BirdsSeen$MAdultsSeen <- rep(0, length(BirdsSeen$years)) #number of breeding adults we caught that year
 
-BirdsSeen$NestlingsFledged <- rep(0, length(BirdsSeen$years)) #number of nestlings fledged
+BirdsSeen$NestlingsFledged <- rep(0, length(BirdsSeen$years)) #number of nestlings fledged from known nests
+BirdsSeen$NestsWFledgeSizeKnown <- rep(0, length(BirdsSeen$years)) #number of nests where we know how many fledged!
+BirdsSeen$BandedFledgelings <- rep(0, length(BirdsSeen$years)) # max number of the nestlings that we think were banded prior to fledging (should be pretty similar to number of nestlings fledged)
 
 BirdsSeen$AdultsUnseen <- rep(0, length(BirdsSeen$years))
 #number of adults we know were there because they returned but were not caught that year!
@@ -44,18 +46,25 @@ for (bird in as.list(globalData$birds)){
     #did all of those years happen consecutively?
     years <- integer()
     for(year in bird$yearsSeen$as.list()){
+      
       years[length(years)+1]<- year$year
+      #clear a before resetting it
       a <- which(BirdsSeen$years==year$year)
-      if(year$age=="HY"){
-        BirdsSeen$RecruitedNestlings[a] <- BirdsSeen$RecruitedNestlings[a]+1
-        if(bird$sex=="F"){
-          BirdsSeen$FRecruitedNestlings[a] <- BirdsSeen$FRecruitedNestlings[a]+1
-        }
-        if(bird$sex=="M"){
-          BirdsSeen$MRecruitedNestlings[a] <- BirdsSeen$MRecruitedNestlings[a]+1
+      #If you're a hatch year but also have nests then you were recruited into the population
+      if(year$age=="HY" ){
+        if(bird$nestList$length>0){
+          BirdsSeen$RecruitedNestlings[a] <- BirdsSeen$RecruitedNestlings[a]+1
+          if(bird$sex=="F"){
+            BirdsSeen$FRecruitedNestlings[a] <- BirdsSeen$FRecruitedNestlings[a]+1
+          }
+          if(bird$sex=="M"){
+            BirdsSeen$MRecruitedNestlings[a] <- BirdsSeen$MRecruitedNestlings[a]+1
+          }
         }
         
+        #If you don't have any nests then you don't count as a recruit and I don't really care about you at all!
       } else {
+        #If you are an adult
         if(year$nest$length==0){
           BirdsSeen$FloaterNumbers[a]<- BirdsSeen$FloaterNumbers[a]+1
           
@@ -107,27 +116,33 @@ for (bird in as.list(globalData$birds)){
   } else {
     #Bird was only seen once so they just get added into the adults seen from that year if they're an adult
     year<-bird$yearsSeen$as.list()[[1]]
-    if(year$nest$length==0){
-      BirdsSeen$FloaterNumbers[a]<- BirdsSeen$FloaterNumbers[a]+1
-      
-    }else {
-      BirdsSeen$AdultsSeen[a]<- BirdsSeen$AdultsSeen[a]+1
-    }
-    if(bird$sex=="F"){
-      if(year$nest$length>0){
-        BirdsSeen$FAdultsSeen[a] <- BirdsSeen$FAdultsSeen[a]+1
-      } else {
-        BirdsSeen$FFloaterNumbers[a]<- BirdsSeen$FFloaterNumbers[a]+1
+    if (year$age != "HY") {
+      #If you are an adult and have no nests then you are a floater
+      if(year$nest$length==0 ){
+        BirdsSeen$FloaterNumbers[a]<- BirdsSeen$FloaterNumbers[a]+1
         
+      }else {
+        #Otherwise you are part of the breeding population!
+        BirdsSeen$AdultsSeen[a]<- BirdsSeen$AdultsSeen[a]+1
+      }
+      #Now we need to do the same thing by sex
+      if(bird$sex=="F"){
+        if(year$nest$length>0){
+          BirdsSeen$FAdultsSeen[a] <- BirdsSeen$FAdultsSeen[a]+1
+        } else {
+          BirdsSeen$FFloaterNumbers[a]<- BirdsSeen$FFloaterNumbers[a]+1
+          
+        }
+      }
+      if(bird$sex=="M"){
+        if(year$nest$length>0){
+          BirdsSeen$MAdultsSeen[a] <- BirdsSeen$MAdultsSeen[a]+1
+        } else {
+          BirdsSeen$MFloaterNumbers[a]<-BirdsSeen$MFloaterNumbers[a]+1
+        }
       }
     }
-    if(bird$sex=="M"){
-      if(year$nest$length>0){
-        BirdsSeen$MAdultsSeen[a] <- BirdsSeen$MAdultsSeen[a]+1
-      } else {
-        BirdsSeen$MFloaterNumbers[a]<-BirdsSeen$MFloaterNumbers[a]+1
-      }
-    }
+  
     
   }
 }
@@ -152,8 +167,32 @@ for (nest in as.list(globalData$nests)){
  
   #add the fledged nestlings to the number of fledged nestlings that year
   if(!is.na(nest$fledgeSize)){
+    #How many nests do we actually know the fledge rates for?
+    BirdsSeen$NestsWFledgeSizeKnown[r] <- BirdsSeen$NestsWFledgeSizeKnown[r] + 1
     BirdsSeen$NestlingsFledged[r]<- BirdsSeen$NestlingsFledged[r]+
       nest$fledgeSize
+    #How many of those fledging nestlings were banded?
+    bandedNestlings <- 0
+    if(nest$nestlings$length>0){
+      for(nestlingkey in nest$nestlings$as.list()){
+        nestling<- get(nestlingkey$m_key, globalData$nestlings)
+        if(!is.na(nestling$nestlingTRES$m_key)){
+          bandedNestlings <- bandedNestlings + 1
+          
+        }
+      }
+    }
+    
+    if (bandedNestlings >= nest$fledgeSize){
+      #if we have more nestlings banded than fledged or equal then the entire fledge group was banded
+      BirdsSeen$BandedFledgelings[r]<- BirdsSeen$BandedFledgelings[r]+ nest$fledgeSize
+        
+    } else {
+      #if less nestlings were banded than fledged then we MAX had the number of banded nestlings fledge with bands
+      BirdsSeen$BandedFledgelings[r]<- BirdsSeen$BandedFledgelings[r]+ bandedNestlings
+    }
+    
+    
   }
 }
 
@@ -261,6 +300,7 @@ ggplot(BirdsSeen, aes(x=years, y=RecruitedNestlings))+
 #each sex caught each year to scale up to what we expect actually recruited that
 #year and then use that to calculate number of recruits to divide by number of
 #fledgelings to get a recruitment from that year!
+#Make sure we use the number of nestlings fledgeing that had bands on them not just the number of nestlings fledging
 proportFRecruit<- sum(BirdsSeen$FRecruitedNestlings)/(sum(BirdsSeen$FRecruitedNestlings)+sum(BirdsSeen$MRecruitedNestlings))
 #I had to average it across all years because there are low recruitment numbers. Hopefully that's OK....
 proportMRecruit<- sum(BirdsSeen$MRecruitedNestlings)/(sum(BirdsSeen$FRecruitedNestlings)+sum(BirdsSeen$MRecruitedNestlings))
@@ -273,30 +313,75 @@ BirdsSeen$EstimatedRecruitM <- BirdsSeen$RecruitedNestlings*proportMRecruit * Bi
 #about male recruitment those years, it hasn't got to Infinity
 BirdsSeen$EstimatedRecruitM[which(BirdsSeen$EstimatedRecruitM==Inf)]<- NA
 
-BirdsSeen$Frecruitmentrate <- BirdsSeen$EstimatedRecruitF/(BirdsSeen$NestlingsFledged/2)
-mean(BirdsSeen$Frecruitmentrate) #0.08936758
-BirdsSeen$Frecruitmentrate[2] 
+#I have no banded fledgelings in 2007 (actually I just have no damn data for
+#it.... useless people) I'm going to toss the 2007 banded fledgelings--> There
+#are banded nestlings that year but they arne't attached to a nest so I don't
+#really have a good idea what's going on
 
-BirdsSeen$Mrecruitmentrate <- BirdsSeen$EstimatedRecruitM/(BirdsSeen$NestlingsFledged/2)
-mean(BirdsSeen$Mrecruitmentrate, na.rm=T) #0.1162657
+BirdsSeen$Frecruitmentrate <- BirdsSeen$EstimatedRecruitF/(BirdsSeen$BandedFledgelings/2)
+#Toss 1975, 1976, 1977 , 2007 and 2016 (First three years we caught too few females 2007 doesn't have fledgelings with known bands,  2016 
+#hasn't had the chance to recruit yet, and we only caught 2 females in 1977 so
+#our estimate of recruitment is shitee)
+mean(BirdsSeen$Frecruitmentrate[-c(1,2,3, 33, 42)]) #0.06226302
+#1976 recruitment rates
+BirdsSeen$Frecruitmentrate[2]  #0.09623431
 
-ggplot(BirdsSeen, aes(x=years, y=Frecruitmentrate))+
-  geom_point()+
-  geom_smooth()+
-  xlab("Year Surveyed")+
-  ylab("Female Recruitment Rate")
+BirdsSeen$Mrecruitmentrate <- BirdsSeen$EstimatedRecruitM/(BirdsSeen$BandedFledgelings/2)
+#Same as for the females I'm going to toss years 1975-1981 because they didn't
+#really start catching males until then plus, 2007 and 2016
+BirdsSeen$Mrecruitmentrate[c(1, 2, 3,4,5,6,7, 33, 42)]<- NA
 
-ggplot(BirdsSeen, aes(x=years, y=EstimatedRecruitF/FirstNests))+
-  geom_point()
-#Huh well you're not even recruiting by the nest! 
+mean(BirdsSeen$Mrecruitmentrate[-c(1, 2, 3,4,5,6,7, 33, 42)], na.rm=T) #0.06856466
 
+ 
+ggplot()+
+   geom_point( data=BirdsSeen[-c(1, 2, 3,4,5,6,7, 33, 42), ], aes( x=years, y=Mrecruitmentrate), color="blue")+
+  #geom_smooth(data=BirdsSeen[-c(1, 2, 3,4,5,6,7, 33, 42), ], aes( x=years, y=Mrecruitmentrate), method="lm", color="blue")+
+  geom_point( data=BirdsSeen[-c( 1, 2, 3, 33, 42), ], aes( x=years, y=Frecruitmentrate), color="red")+
+  #geom_smooth(data=BirdsSeen[-c(1,2, 3, 33, 42), ], aes( x=years, y=Frecruitmentrate), method="lm", color="red")+
+  xlab("Year")+
+  ylab("Recruitment Rate")
 
-ggplot(BirdsSeen, aes(x=years, y=Mrecruitmentrate))+
-  geom_point()+
-  geom_smooth()+
-  xlab("Year Surveyed")+
-  ylab("Male Recruitment Rate")
+#Huh male recruitment rate is doing something really different than female
+#recruitment rate. It's dropping way more dramatically
 
+#If I try to model that what happens?
+#First need to make different vectors where the removed points are NA
+BirdsSeen$Mrecruitmentrate2 <- BirdsSeen$Mrecruitmentrate
+BirdsSeen$Mrecruitmentrate2[c(1, 2, 3,4,5,6,7, 33, 42)]<- NA
+BirdsSeen$Frecruitmentrate2 <- BirdsSeen$Frecruitmentrate
+BirdsSeen$Frecruitmentrate2[c(1,2,3, 33, 42)] <- NA
+
+#WHat might influence recruitment? year if fledgelings are lower quality now sex
+#if there are differential recruitment rates  and there definitely appears to
+#be! Maybe the number of hatched nestlings? That could have influenced the
+#quality of the fledgelings if they were competing with all these
+recruitData <- melt(BirdsSeen, id=c("years")) %>% filter (variable=="Frecruitmentrate2" |variable=="Mrecruitmentrate2")
+recruitData$variable<- as.character(recruitData$variable)
+recruitData$variable[which(recruitData$variable=="Frecruitmentrate2")] <- "F"
+recruitData$variable[which(recruitData$variable=="Mrecruitmentrate2")] <- "M"
+colnames(recruitData) <- c("year", "sex", "recruitmentrate")
+recruitData$sex <- as.factor(recruitData$sex)
+
+recruitData <- recruitData %>% filter (!is.na(sex) & !is.na(recruitmentrate))
+recruitMod <- lm(recruitmentrate ~ year*sex, data=recruitData)
+plot(recruitMod) #Q-Q plot is bad for large values and scale location plot trends down
+hist(resid(recruitMod, type="pearson"))
+shapiro.test(resid(recruitMod, type="pearson")) #yup no surprise those residuals aren't normal!
+plot(resid(recruitMod, type="pearson")~ recruitData$year) #variance is pretty good except in the late 2000s where we skyrocket
+plot(resid(recruitMod, type="pearson")~ recruitData$sex) #Variance is fine
+plot(resid(recruitMod, type="pearson")~ recruitData$recruitmentrate) 
+#hmmmmm very obvious trend here..... that's super problematic. we are a lot
+#worse at predicting recruitment for larger recruitment values
+#What if I log recruitment?
+recruitMod2 <- lm(log(recruitmentrate+0.0001) ~ year*sex, data=recruitData)
+plot(recruitMod2) #nope that's arguably worse. Sigh
+
+#Fran used the arcsin transformation. I don't understand why she did that because I have no idea how you'd interpret that but I can try
+recruitMod3 <- lm(asin(recruitmentrate) ~ year*sex, data=recruitData)
+plot(recruitMod3) 
+hist(resid(recruitMod3, type="pearson"))
+plot(resid(recruitMod3, type="pearson")~ recruitData$recruitmentrate) 
 
 
 #How do floaters do over the years? 
@@ -305,3 +390,8 @@ ggplot(BirdsSeen, aes(x=years, y=FloaterNumbers))+
   xlab("Year Surveyed")+
   ylab("Adults without known nests")+
   geom_smooth()
+#They follow the exact same trends as the box population
+
+
+
+
