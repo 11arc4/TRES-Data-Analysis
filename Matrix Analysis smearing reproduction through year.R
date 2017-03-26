@@ -4,7 +4,7 @@ library(popbio)
 
 hatchrate <- 0.7398289 #Taken from my Baby Tree Swallow Population Matrix Model script
 fledgerate <- 0.628297 #Taken from my Baby Tree Swallow Population Matrix Model script
-FRecruitrate <-  0.08936758 #Taken from my Effect of Adult Catch Effort on Recruitment
+FRecruitrate <-  0.06226302 #Taken from my Effect of Adult Catch Effort on Recruitment
 
 SYFreturnrate <- 0.1522606 #Taken from my Baby Tree Swallow Population Matrix Model script
 ASYFreturnrate <-0.27142 #Taken from my Baby Tree Swallow Population Matrix Model script
@@ -59,8 +59,8 @@ meanwaitFledgeandAdult <- 365/eggtonestlingstime #25.84815
 pstayfledgeandadult <- 1- 1/meanwaitFledgeandAdult #0.9613125
 
 
-ASYreturnholdcombined <- 1-ASYFreturnrate/meanwaitFledgeandAdult 
-#instead of having a 1 chance of making it through you only have part of a change of success!
+ASYreturnholdcombined <- 1-ASYFreturnrate/meanwaitFledgeandAdult #0.9894611
+#instead of having a 1 chance of making it through you only have part of a chance of success! ie the ASYFrecturnrate
   
 
 
@@ -72,7 +72,7 @@ A[2, 2]<- pstaynestling
 A[3,2] <- fledgerate
 A[3, 3] <- pstayfledgeandadult
 A[4,3] <- FRecruitrate
-A[1,4] <- SYLayrate
+A[1,4] <- SYLayrate /(365/eggtonestlingstime)
 A[4,4] <- pstayfledgeandadult
 A[5,4] <- SYFreturnrate/ (365/eggtonestlingstime) #This smears reproduction throughout the year 
 A[1,5] <- ASYLayrate/ (365/eggtonestlingstime) #This smears reproduction throughout the year 
@@ -97,6 +97,7 @@ stage.vector.plot(stage.vectors = p$stage.vectors)
 lambda <- p$pop.changes
 time<- c(2:100)
 plot(lambda~time, ylab="Population growth", xlab="Year")
+#Lambda stabilizes at 1.038516 
 
 #Population Size 
 size <- p$pop.sizes
@@ -109,4 +110,15 @@ par(type="b")
 plot(p2) #Same deal as before where I don't actually get a population growing!
 
 
+eigA <- eigen.analysis(A)
+eigA  
+#Sensitivity is highest for the SY return rate (0.67) Elasticity is highest for
+#the time fledgelings and SY females stay in the that stage. That's useless to
+#me because we can't change that!
+
+
+
+
+############################
+#I am suspicious of my 
 
