@@ -17,7 +17,7 @@ A["Nestling 1", "Egg 14"]<- hatchrate
 fledgerate <- 0.628297 #Taken from my Baby Tree Swallow Population Matrix Model script
 A["Fledge 1", "Nestling 20"]<- fledgerate
 
-FRecruitrate <-  0.08936758 #Taken from my Effect of Adult Catch Effort on Recruitment
+FRecruitrate <-  0.06226302 #Taken from my Effect of Adult Catch Effort on Recruitment
 A["SY 1", "Fledge 187"] <- FRecruitrate #Need to become a SY bird on Jan 1 to match recruits breeding schedules with everyone else's! (This only works if we all breed at the same time)
 
 
@@ -67,7 +67,7 @@ n0 <- c(rep(0, 14) #0 eggs of any age
         rep(0, 187), #0 fledgelings of any age
         16, rep(0, 364), #16 SY birds on the first day of the year (doesn't matter when that is because we don't let birds die until the last day anyway) and none on any other day
         38, rep(0, 364)) # 38 ASY birds on the first day and none on other days
-p <- pop.projection(A=A, n=n0, iterations= 900)
+p <- pop.projection(A=A, n=n0, iterations= 7300)  #To do 20 years we need 20* 365= 7300 iterations
 
 par(mar=c(2.5,2.5,0.5,0.5))
 stage.vector.plot(stage.vectors=p$stage.vectors,col=2:4,
@@ -75,26 +75,29 @@ stage.vector.plot(stage.vectors=p$stage.vectors,col=2:4,
 #There are too many stages to make this a useful graph!
 
 lambda<-p$pop.changes # growth rate
-time<-c(2:900) # time
+time<-c(2:7300) # time
 par(mar=c(2.5,2.5,0.5,0.5))
 plot(lambda~time,type="l",
      ylab="Population growth",xlab="Years after invasion",
      mgp=c(1.2,0.4,0),cex.axis=0.6,cex.lab=0.8)
-#Oh cool you can see the iterations!
-#You can really see that I am having death happen all on one day in the winter (Jan 1), and all the breeding happen on 2 days
-#This averages out to a lambda = 1 because most of the time lambda does equal 1 but that's not all that's going on...
+#Oh cool you can see the iterations! You can really see that I am having death
+#happen all on one day in the winter (Jan 1), and all the breeding happen on 2
+#days This averages out to a lambda = 1 because most of the time lambda does
+#equal 1 but that's not all that's going on... YOu can see that that is not
+#what's happening at all when you look at the population projection! I"m still
+#consufed. This effect doesn't actually go away.... hmmmm
 p2<-project(A=A,vector=n0,time=900)
 #Here I get a warning that my matrix is imprimitive. I am somewhat unsure
 #whether this is a problem or not. It is a result of having these very LONG
 #loops as you run through the whole year
-
 par(mar=c(2.5,2.5,1,1))
 plot(p2,mgp=c(1.2,0.4,0),cex.axis=0.8,lwd=0.6)
 
 
 eigA<-eigen.analysis(A)
-PropEggStable <- sum(eigA$stable.stage[1:14])
 
+#These proportions make sense!
+PropEggStable <- sum(eigA$stable.stage[1:14])
 PropNestlingStable <- sum(eigA$stable.stage[15:34]) #0.05095036
 PropFledgelingStable <- sum(eigA$stable.stage[35:221]) #0.4089243
 PropSYStable <- sum(eigA$stable.stage[222: 587]) #0.1647359
@@ -108,7 +111,9 @@ SenstoSYReturn <- eigA$sensitivities["ASY 1", "SY 365"] #0.002989756
 SenstoASYReturn <- eigA$sensitivities["ASY 1", "ASY 365"] #0.006007899
 SenstoASYlay <- eigA$sensitivities["Egg 1", "ASY 140"] #0.009057042
 SenstoSYlay <- eigA$sensitivities["Egg 1", "SY 140"] #0.004507123
-#This sensitivity analysis suggest that it's actually Fledgerate that is what is most important
+#This sensitivity analysis suggest that it's actually Fledgerate that is what is
+#most important-- if you look at the population graph that really makes a lot of
+#sense-- fledging time is when the population drops the most
 
 ElastoHatch <- eigA$elasticities["Nestling 1", "Egg 14"] #0.02728915
 ElastoFledge <- eigA$elasticities["Fledge 1", "Nestling 20"] #0.08597442
@@ -121,6 +126,7 @@ ElastoSYlay <- eigA$elasticities["Egg 1", "SY 140"] #0.01157853
 
 
 #lets try to see what happens if we vary the fledging rate
+#This isn't working properly! I'm not sure why that is? 
 A2 <- A
 fledgerateoptions <- seq(from=0, to=1, by=0.05)
 lam<- c()
