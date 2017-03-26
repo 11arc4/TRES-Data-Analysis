@@ -24,7 +24,7 @@ GridIDCodes<- c("HU", "NB", "NE", "SP", "SR",  "BG", "GC" )
 for (a in 1:length(filelist)){
   nestfile <-filelist[a]
   nestdata <- read.csv( paste(inputdir, nestfile, sep="/"), as.is=TRUE, na.strings=c("", "NA"))
-  nestdata<-AssignRenestStatus(nestdata)
+  nestdata<-AssignRenestStatus(nestdata) #I know that if I use the nest data structure I can do better!!
   year <- nestdata$Year[1]
   #First nests= 2 new birds
   #Female and Male renests= 1 new bird
@@ -126,7 +126,6 @@ Availability <- data.frame(row.names=Year, YearlyTerr, YearlyBoxes,
 
 BoxOccupancy<-merge(Availability, BirdNumb,  by="row.names")
 colnames(BoxOccupancy)[1]<- "Year"
-#Note that since I don't have the 1999 data yet, 1999 is left out of the box occupancy dataframe
 BoxOccupancy$Year <- as.integer(BoxOccupancy$Year)
 BoxOccupancy$BoxOccTotal<- BoxOccupancy$BirdTotal/(2*BoxOccupancy$YearlyBoxes)
 BoxOccupancy$BoxOccHU <-  BoxOccupancy$HUBirdTotal/(2*BoxOccupancy$HUBoxes)
@@ -145,6 +144,9 @@ BoxOccupancy$TerrOccSRB<- BoxOccupancy$SRBBirdTotal/(2*BoxOccupancy$SRBTerritori
 BoxOccupancy$TerrOccBG<- BoxOccupancy$BGBirdTotal/(2*BoxOccupancy$BGTerritories)
 
 
+#Export That Box occupancy
+exportdir <- "~/Masters Thesis Project/Tree Swallow Data/Amelia TRES data 1975-2016/Improved and Cleaned Data"
+write.csv(x=BoxOccupancy, file=paste(exportdir, "Box Occupancy using nestdata renest function.csv", sep="/"), na="", row.names = F)
 
 
 
