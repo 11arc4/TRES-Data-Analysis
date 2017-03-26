@@ -5,12 +5,12 @@ library(popbio)
 #egg--> SY--> Adult
 hatchrate <- 0.7398289 #Taken from my Baby Tree Swallow Population Matrix Model script
 fledgerate <- 0.628297 #Taken from my Baby Tree Swallow Population Matrix Model script
-FRecruitrate <-  0.08936758 #Taken from my Effect of Adult Catch Effort on Recruitment
+FRecruitrate <-  0.06226302 #Taken from my Effect of Adult Catch Effort on Recruitment
 
 
 eggRecruitRate <- hatchrate * fledgerate * FRecruitrate
 
-
+#I have these super low return rates for my data but De Steven et al. calculated 0.579 return rates for adults
 SYFreturnrate <- 0.1522606 #Taken from my Baby Tree Swallow Population Matrix Model script
 ASYFreturnrate <-0.27142 #Taken from my Baby Tree Swallow Population Matrix Model script
 SYLayrate <- 5.123011 / 2 #Only half will be female
@@ -24,6 +24,12 @@ A <- matrix(0, nrow=3, ncol=3, dimnames = list(stages, stages))
 A[1, 2] <- SYLayrate 
 A[1, 3] <- ASYLayrate 
 A[2, 1] <- eggRecruitRate
+#return rates are very conservative--might be a fair bit higher! We only catch
+#about 50% of all birds, 64% of all males and 35% of males. My return rates are
+#correcting for the fact that we aren't catching the whole population but that
+#doens't deal with the fact that there will be birds that we didnt catch the
+#first or last year they showed up
+#May also want to try this with De Stevens return rates (0.75% of SY and 0.533 of ASY) #De Steven 1980
 A[3, 2] <- SYFreturnrate
 A[3, 3] <- ASYFreturnrate
 A
@@ -37,6 +43,8 @@ N0 <- c(0, 16, 38)
 #project the population for 42 years (course of our study system)
 p <- pop.projection(A=A, n=N0, iterations=42)
 p
+
+#lambda is 0.4095314! Dear god that's super low. 
 
 
 #lets see what age structure the population stableizes at
