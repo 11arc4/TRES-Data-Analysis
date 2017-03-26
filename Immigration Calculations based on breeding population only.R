@@ -150,7 +150,12 @@ Immigration$UnknownReturnStatusBirds<- Immigration$EstimatePop-Immigration$NewBi
 Immigration$UnknownReturnStatusFemales<- Immigration$FEstimatePop-Immigration$NewFemalesCaught-Immigration$ReturningFemalesCaught-Immigration$RecruitedFemalesCaught
 Immigration$UnknownReturnStatusMales <- Immigration$MEstimatePop-Immigration$NewMalesCaught-Immigration$ReturningMalesCaught-Immigration$RecruitedMalesCaught
 
+#How much of the population do we usually catch?
+mean((Immigration$EstimatePop - Immigration$UnknownReturnStatusBirds)/Immigration$EstimatePop)
+mean((Immigration$FEstimatePop - Immigration$UnknownReturnStatusFemales)/Immigration$FEstimatePop)
+mean((Immigration$MEstimatePop - Immigration$UnknownReturnStatusMales)/Immigration$MEstimatePop)
 
+#catch about 50% of all birds, 64% of all males and 35% of males
 
 
 ggplot(Immigration, aes(x=years, y=NewBirdsCaught))+
