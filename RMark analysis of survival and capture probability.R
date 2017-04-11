@@ -1,5 +1,7 @@
 #RMark analysis of birds
-
+setwd("~/Masters Thesis Project/TRES Data Analysis/RMark Preliminary Survival Analysis")
+#Now all the stupid mark files will get put in their own folder away from
+#everything important.
 library(dplyr)
 library(tidyr)
 #Want to take out capture history, age at first capture and sex
@@ -36,15 +38,51 @@ for (bird in as.list(globalData$birds)){
 #Now let's make this dummy dataset into a data set that's in the right format for RMark. 
 
 dummy$Ch <- apply(dummy[,1:42], 1, paste, collapse="")
+dummy$Sex[which(datMark$Sex==7)] <- "U"
+
+
 datMark <- data.frame(dummy$Ch, dummy$ageAtFirstSight, dummy$sex)
 colnames(datMark) <- c("ch", "AgeAtFirstSight", "Sex")
-datMark$ch <- as.character(datMark$ch)
-
 datMark$FirstSighting[which(datMark$AgeAtFirstSight=="HY")] <- "Nestling"
 datMark$FirstSighting[which(datMark$AgeAtFirstSight!="HY")] <- "Adult"
-datMark$FirstSighting <- as.factor(datMark$AgeAtFirstSight)
+datMark$FirstSighting <- as.factor(datMark$FirstSighting)
+datMark$ch <- as.character(datMark$ch)
 
-datMark$Sex[which(datMark$Sex==7)] <- "U"
+
+#I want a data set that is JUST adult bird sightings. I need to remove the first
+#sighting of birds that were caught as nestlings, and if they have no other
+#sighting they are removed from the dataset
+adummy <- dummy %>% filter(ageAtFirstSight!="HY")
+
+ndummy <- dummy %>% filter(ageAtFirstSight=="HY")
+
+for (i in 1:nrow(ndummy)){
+  ndummy[i, which(ndummy[i,]==1)[1]]<- 0
+  ndummy$sightings[i] <- sum(ndummy[i,1:42])
+}
+
+ndummy2 <- ndummy %>% filter(sightings>0)
+ndummy2 <- ndummy2[, 1:(ncol(ndummy2)-1)] #remove the sightings column
+
+dummy_adult <- rbind(ndummy2, adummy)
+
+#Now we just have to put the adut data into the right Mark format and we're good to go
+dummy_adult$Ch <- apply(dummy_adult[,1:42], 1, paste, collapse="")
+dummy_adult$sex[which(dummy_adult$sex==7)] <- "U"
+datMark_adult <- data.frame(dummy_adult$Ch, dummy_adult$ageAtFirstSight, dummy_adult$sex)
+colnames(datMark_adult) <- c("ch", "AgeAtFirstSight", "Sex")
+#Since we removed all the times we saw nestlings, I will put those birds in as SY at first sighting instead
+datMark_adult$AgeAtFirstSight[which(datMark_adult$AgeAtFirstSight=="HY")] <- "SY"
+datMark_adult$ch <- as.character(datMark_adult$ch)
+datMark_adult$Sex[which(datMark_adult$Sex=="F ")] <- "F"
+datMark_adult$Sex[which(datMark_adult$Sex==6)] <- "U"
+
+#Since we only need survival for female birds to put into the matrix, lets do that....
+
+datMark_F<- datMark_adult %>% filter(Sex=="F")
+
+datMark_F$age[which(datMark_F$AgeAtFirstSight=="ASY")]<- 2
+datMark_F$age[which(datMark_F$AgeAtFirstSight!="ASY")]<- 1
 
 #OK let's start doing this!
 library(RMark)
@@ -54,115 +92,62 @@ library(RMark)
 #actually died. (Although ultimately I may want to incorporate information about
 #the birds that were killed for experiments and therefore will want to use a
 #different type of model for that)
-tsprocess <- process.data(datMark,model="CJS",begin.time=1975, groups=c("AgeAtFirstSight", "Sex", "FirstSighting"))
-#Now I need to make the data in the right format for a CJS model
-ts.ddl<- make.design.data(tsprocess)
+tsprocess <- process.data(datMark_F,model="CJS",begin.time=1975, groups= ("age"), initial.ages =c(1, 2))
+#age vector is the initial ages, "initial.ages" assigns a dummy variable to
+#count up from for each of those. So I could use AHY ASY and SY and assign c(1,
+#2, 1) instead (it's done alphabetically) That condensed the data into that form
+#where you have the different numbers of times you've seen a particular capture
+#probability. Now I need to make the data in the right format for a CJS model
+ts.ddl<- make.design.data(tsprocess, parameters=list(Phi=list(age.bins=c(1, 2)),
+                                                     p=list(age.bins=c(1,2)))) 
+#may ultimately want to set age.bins but I don't really understand how to use
+#that feature yet
 
 #Now there are a number of different models that I would really like to run
 
 #I will want to include Time (continuous), Age (discrete but based on the number
-#of times we've captured the bird), AgeAtFirstSight, Sex as those factors are
-#what might be influencing both capture success and survival.
+#of times we've captured the bird),Sex as those factors are
+#what might be influencing both capture success and survival. Also make AgeAtFirstSight ()
 #I'm going to simplify this even further so that you are either an adult or a neslting at first sighting. 
 
-#Capture probabilities will ALWAY depend on whther you were a nestling first or not. 
-p.dot <- list(formula= ~FirstSighting)
-p.sex <- list(formula=~Sex*FirstSighting)
-p.Age <- list(formula=~Age*FirstSighting)
-p.Time <- list(formula=~Time*FirstSighting)
-p.sex.Age <- list(formula=~Sex*Age*FirstSighting)
-p.sex.Time <- list(formula=~Sex*Time*FirstSighting)
-p.Age.Time <- list(formula=~Age*Time*FirstSighting)
-p.sex.Age.Time <- list(formula=~Sex*Age*Time*FirstSighting)
+#I KNOW that we caught different numbers of birds each year so time should go in all the capture probabilities.
+p.time <- list(formula= ~time)
+p.dot <- list(formula= ~1)
 
-#Survival probabilities will also ALWAY depend on whther you were a nestling first or not. 
+#Survival probabilities might also vary by time but now they don't HAVE to, and that time function is continuous (Time not time)
 
-phi.dot <- list(formula= ~FirstSighting)
-phi.sex <- list(formula=~Sex*FirstSighting)
-phi.Age <- list(formula=~Age*FirstSighting)
-phi.Time <- list(formula=~Time*FirstSighting)
-phi.sex.Age <- list(formula=~Sex*Age*FirstSighting)
-phi.sex.Time <- list(formula=~Sex*Time*FirstSighting)
-phi.Age.Time <- list(formula=~Age*Time*FirstSighting)
-phi.sex.Age.Time <- list(formula=~Sex*Age*Time*FirstSighting)
-
-
-
+phi.dot <- list(formula= ~1) #if survival is constant in all cases
+phi.Time <- list(formula=~Time) #if survival rates change over the years
+phi.Age <- list(formula=~Age) #If older birds (based on having seen them previously, not their known age) have lower survival
+phi.Age.Time <- list(formula=~Time*Age) #if both age (based on sight history) have an effecct
+phi.Age.plus.Time <- list(formula=~Time+Age)
+#I'll pick the best one of these and then see if interactions are of any importance. 
 
 
 #Let's build all our possible options for models, and then compare them all!
 
-ts1 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.dot, p=p.dot ), output=F)
-ts2 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex, p=p.dot ), output=F)
-ts3 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age, p=p.dot ), output=F)
-ts4 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Time, p=p.dot ), output=F)
-ts5 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age, p=p.dot ), output=F)
-ts64 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Time, p=p.dot ), output=F)
-ts6 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age.Time, p=p.dot ), output=F)
-ts7 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age.Time, p=p.dot ), output=F)
 
-ts8 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.dot, p=p.sex ), output=F)
-ts9 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex, p=p.sex ), output=F)
-ts10 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age, p=p.sex ), output=F)
-ts11<-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Time, p=p.sex ), output=F)
-ts12 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age, p=p.sex ), output=F)
-ts13 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Time, p=p.sex ), output=F)
-ts14 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age.Time, p=p.sex ), output=F)
-ts15 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age.Time, p=p.sex ), output=F)
+ts1 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.dot, p=p.dot), output=F, adjust=F)
+ts2 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Time, p=p.dot), output=F, adjust=F)
+ts3 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age, p=p.dot), output=F, adjust=F) 
+ts4 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.Time, p=p.dot), output=F, adjust=F)
+ts5 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.plus.Time, p=p.dot), output = F, adjust=F)
 
-ts16 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.dot, p=p.Age ), output=F)
-ts17 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex, p=p.Age ), output=F)
-ts18 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age, p=p.Age ), output=F)
-ts19 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Time, p=p.Age ), output=F)
-ts20 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age, p=p.Age ), output=F)
-ts21 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Time, p=p.Age ), output=F)
-ts22 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age.Time, p=p.Age ), output=F)
-ts23 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age.Time, p=p.Age ), output=F)
+ts6 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.dot, p=p.time), output=F, adjust=F)
+#this is the model where all adult birds have constant survival across years, but time has different capture pobabilities
+#phi = 0.3582621
+ts7 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Time, p=p.time), output=F, adjust=F)
+ts8 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age, p=p.time), output=F, adjust=F) 
+#Based on the model that seperates ASY and SY return but averages over the years (second best model )
+#logit link so we have to take exp
+SYreturn8 <- exp(-1.1886984)
+ASYreturn8 <- exp(-1.1886984+0.2324945)
 
-ts24 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.dot, p=p.Time ), output=F)
-ts25 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex, p=p.Time ), output=F)
-ts26 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age, p=p.Time ), output=F)
-ts27 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Time, p=p.Time ), output=F)
-ts28 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age, p=p.Time ), output=F)
-ts29 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Time, p=p.Time ), output=F)
-ts30 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age.Time, p=p.Time ), output=F)
-ts31 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age.Time, p=p.Time ), output=F)
 
-ts32 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.dot, p=p.sex.Age ), output=F)
-ts33 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex, p=p.sex.Age ), output=F)
-ts34 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age, p=p.sex.Age ), output=F)
-ts35 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Time, p=p.sex.Age ), output=F)
-ts36 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age, p=p.sex.Age ), output=F)
-ts37 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Time, p=p.sex.Age ), output=F)
-ts38 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age.Time, p=p.sex.Age ), output=F)
-ts39 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age.Time, p=p.sex.Age ), output=F)
+ts9 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.Time, p=p.time), output=F, adjust=F)
+ts10 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.plus.Time, p=p.time), output = F, adjust=F)
 
-ts40 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.dot, p=p.sex.Time ), output=F)
-ts41 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex, p=p.sex.Time ), output=F)
-ts32 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age, p=p.sex.Time ), output=F)
-ts43 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Time, p=p.sex.Time ), output=F)
-ts44 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age, p=p.sex.Time ), output=F)
-ts45 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Time, p=p.sex.Time ), output=F)
-ts46 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age.Time, p=p.sex.Time ), output=F)
-ts47 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age.Time, p=p.sex.Time ), output=F)
 
-ts48 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.dot, p=p.Age.Time ), output=F)
-ts49 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex, p=p.Age.Time ), output=F)
-ts50 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age, p=p.Age.Time ), output=F)
-ts51 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Time, p=p.Age.Time ), output=F)
-ts52 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age, p=p.Age.Time ), output=F)
-ts53 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Time, p=p.Age.Time ), output=F)
-ts54 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age.Time, p=p.Age.Time ), output=F)
-ts55 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age.Time, p=p.Age.Time ), output=F)
-
-ts56 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.dot, p=p.sex.Age.Time ), output=F)
-ts57 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex, p=p.sex.Age.Time ), output=F)
-ts58 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age, p=p.sex.Age.Time ), output=F)
-ts59 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Time, p=p.sex.Age.Time ), output=F)
-ts60 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age, p=p.sex.Age.Time ), output=F)
-ts61 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Time, p=p.sex.Age.Time ), output=F)
-ts62 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.Age.Time, p=p.sex.Age.Time ), output=F)
-ts63 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age.Time, p=p.sex.Age.Time ), output=F)
 #Use this to compare models For many of these models MARK underestimates the
 #parameters so there is disagreement between the number of parameters RMark and
 #Mark are giving. I am going with the more conservative RMark parameter count
@@ -170,6 +155,55 @@ ts63 <-  mark(tsprocess, ts.ddl, model.parameters=list(Phi=phi.sex.Age.Time, p=p
 #parameters which don't get counted....
 ts.cjs.results <- collect.models()
 #Now we should do model averaging on the models
-gc() #This is for garbage collection, to hopefully get me some more space!
 modelaverage <- model.average(ts.cjs.results)
-#Jesus christ it's a 1.8GB vector.... that's too big....
+
+remove.mark(ts.cjs.results)
+##################
+#Now lets do an analysis of the nestlings
+
+ndummy <- dummy %>% filter(ageAtFirstSight=="HY")
+
+ndummy$Ch <- apply(ndummy[,1:42], 1, paste, collapse="")
+datMark_nestling <- data.frame(ndummy$Ch, ndummy$ageAtFirstSight,  ndummy$sex)
+colnames(datMark_nestling) <- c("ch", "age", "sex")
+#Since we removed all the times we saw nestlings, I will put those birds in as SY at first sighting instead
+datMark_nestling$ch <- as.character(datMark_nestling$ch)
+
+
+nestlingprocess <- process.data(datMark_nestling,model="CJS",begin.time=1975, groups= c("age", "sex"), initial.ages =c(0))
+#initial age for all the hatchlings is 0 because here I am only looking at those birds we first saw as nestlings
+nestling.ddl<- make.design.data(nestlingprocess, parameters=list(Phi=list(age.bins=c(0,1, 2, 42)),
+                                                     p=list(age.bins=c(0,1,2,42)))) 
+#again we are binning the ages into HY, SY and ASY (AHY will be assigned 1 just like SY) ie age 0, 1, and 2-13
+
+
+#Now we need to make the capture functions (p). Capture will also depend on sex
+#but I'm a bit unsure how to take that into account since I don't know the sex
+#for so many of the birds..... it's also super biased because I only know the sex for birds that survived.....
+p.time <- list(formula= ~time)
+p.dot <- list(formula= ~1)
+
+#Now lets make the survival functions (phi)
+phi.dot <- list(formula= ~1) #if survival is constant in all cases
+phi.Time <- list(formula=~Time) #if survival rates change over the years
+phi.age <- list(formula=~age) #If older birds (based on having seen them previously, not their known age) have lower survival
+phi.age.Time <- list(formula=~Time*age) #if both age (based on sight history) have an effecct
+phi.age.plus.Time <- list(formula=~Time+age)
+
+
+n1 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.time), output = F, adjust=F)
+n2 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.time), output = F, adjust=F)
+n3 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.time), output = F, adjust=F)
+#this is the best model that doesn't include a time variable survival
+
+n4 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.time), output = F, adjust=F)
+n5 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.time), output = F, adjust=F)
+
+n6 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.dot), output = F, adjust=F)
+n7 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.dot), output = F, adjust=F)
+n8 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.dot), output = F, adjust=F)
+n9 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.dot), output = F, adjust=F)
+n10 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.dot), output = F, adjust=F)
+
+
+nestling.cjs.results <- collect.models()
