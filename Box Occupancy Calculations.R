@@ -158,7 +158,7 @@ baseBoxGraph <- ggplot(BoxOccupancy, aes(x=Year, y= value, color=variable))+
   xlab ("Year") +
   ylab ("Box Occupancy") +
   theme_classic()+
-  theme(text = element_text(size=20)+axis.text.x = element_text(angle=90, hjust=1))
+  theme(text = element_text(size=20), axis.text.x = element_text(angle=90, hjust=1))
 
 #Add on Hughson's
 baseBoxGraph +
@@ -266,12 +266,14 @@ allgridTerrGraph <- baseTerrGraph +
                        labels=c("Hughson's", "New Barn", "North-East Sanctuary", "Sandpit", "SRB","Bridgets" ,"All grids"))
 
 
-
-PresentationBoxOcc 
-ggplot(BoxOccupancy, aes(x=Year, y= value), show.legend=F)+
+PresentationBoxOcc <-ggplot(BoxOccupancy, aes(x=Year, y= value), show.legend=F)+
   geom_point(aes(Year, y=BoxOccTotal, color="BoxOccTotal"), show.legend = F)+
   stat_smooth(aes(Year, y=BoxOccTotal, color="BoxOccTotal"), show.legend = F)+
   xlab ("Year") +
   ylab ("Box Occupancy") +
   theme_classic()+
   theme(text = element_text(size=20), axis.title.y = element_text(angle=0, vjust=0.5))
+setwd("~/Masters Thesis Project/Basic Figures")
+png(filename="Basic Box Occupancy.png", width=600, height=400)
+PresentationBoxOcc
+dev.off()

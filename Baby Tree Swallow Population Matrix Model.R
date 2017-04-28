@@ -43,9 +43,11 @@ meanclutchesF <- mean(Freprod$nestsinyear, na.rm = T) #1.066505
 #Does it differ if you are SY vs ASY?
 SYFreprod <- reprod %>% filter(sex=="F" & age== "SY")
 meanclutchesSYF <- mean(SYFreprod$nestsinyear, na.rm=T) #1.035661
+sd(SYFreprod$nestsinyear)
 
 ASYFreprod <- reprod %>% filter(sex=="F" & age != "SY")
 meanclutchesASYF <- mean(ASYFreprod$nestsinyear, na.rm=T) #1.074427
+sd(ASYFreprod$nestsinyear)
 
 #mean number of nests per male
 Mreprod <- reprod%>% filter(sex=="M")
@@ -73,6 +75,10 @@ for(nest in as.list(globalData$nests)){
   parameters$hatch[i] <- nest$hatchSize
   parameters$fledge[i] <- nest$fledgeSize
   parameters$year[i]<- nest$year
+  parameters$renestStatus[i] <- nest$renestStatus
+
+  parameters$experiment[i] <- nest$experiment
+  
   if (!is.na(nest$femaleID$m_key)){
     #message("Known female", nest$femaleID$m_key)
     
@@ -113,22 +119,37 @@ for(nest in as.list(globalData$nests)){
   }
   
 }
-
-
+#if your experimental group is control then it's not actually an experiment....
+parameters$experiment[which(parameters$experiment=="Control" | parameters$experiment=="control" | parameters$experiment=="CON")] <- NA
 
 
 #removed these three nests where we are getting infinite clutch size because
 #they had no eggs but a nestling was transfered in
 parameters <- parameters [-c(which(parameters$hatch>parameters$clutch & parameters$clutch==0)), ]
-
-
 parametersSYF <- parameters %>% filter(FAge=="SY")
 parametersASYF <- parameters %>% filter(FAge!="SY" & !is.na(FAge))
  #Mean clutch size
 meanClutchSize <- mean(parameters$clutch, na.rm=T)  #5.273177
+hist(parameters$clutch)
+abline(v=meanClutchSize)
+clutchSD <- sd(parameters$clutch, na.rm = T)
+abline(v=meanClutchSize+clutchSD, col="red")
+abline(v=meanClutchSize-clutchSD, col="red")
+
+
+descdist
 #Does it differ by SY and ASY?
 meanClutchSizeSYF <- mean(parametersSYF$clutch, na.rm=T) #4.946609
+hist(parametersSYF$clutch)
+sd(parametersSYF$clutch, na.rm = T)
+
 meanclutchSizeASYF <- mean(parametersASYF$clutch, na.rm=T) #5.459556
+sd(parametersASYF$clutch, na.rm=T)
+
+meanclutchSizeUnexp <- mean(parametersUnExp$clutch, na.rm=T) #5.263739
+
+t.test(parametersSYF$clutch, parametersASYF$clutch) #Are significantly different
+
 
 #mean Layrate-- must be the same for males and females! (actually may differ bit
 #if we account for extrapair paternity but I can't at all and need to just
@@ -144,13 +165,14 @@ layrateASY <- meanclutchSizeASYF * meanclutchesASYF #5.865897
 #Can only calculate hatchrate for clutches laid-- already dealt with above though
 hatchPar <- parameters %>% filter(!is.na(hatch) & clutch>0)
 hatchrate <- mean(hatchPar$hatch/hatchPar$clutch) #0.7398289
+sd(hatchPar$hatch/hatchPar$clutch)
 #Does if differ by SY and ASY?
 hatchParSY <- parameters %>% filter(!is.na(hatch) & !is.na(clutch) & FAge=="SY")
 hatchrateSY <- mean(hatchParSY$hatch/ hatchParSY$clutch) #0.7660019
 hatchParASY <- parameters %>% filter(!is.na(hatch) & !is.na(clutch) & FAge!="SY" & !is.na(FAge) & clutch>0)
 hatchrateASY <- mean(hatchParASY$hatch/hatchParASY$clutch) #0.7913602
 #Hatch success is slightly higher for ASY females but not much
-
+t.test(hatchParASY$hatch/hatchParASY$clutch, hatchParSY$hatch/ hatchParSY$clutch)
 
 #Fledge rate
 fledgePar <- parameters %>% filter (hatch>0 & !is.na(fledge))
@@ -245,6 +267,59 @@ meanSYfirsteggdate <- mean(SYparameters$firsteggdate, na.rm=T) #143.4294
 ASYparameters <- parameters%>% filter (FAge!="SY" & !is.na(FAge))
 meanASYfirsteggdate <- mean(ASYparameters$firsteggdate, na.rm=T) #138.2539
 
+
+#######################
+#Do any of the parameters I estimated above vary based on whether you are part of the experiments or not?
+
+parametersExp <- parameters %>% filter(!is.na(experiment))
+parametersExpSY <- parametersExp %>% filter(FAge=="SY")
+parametersExpASY <- parametersExp %>% filter(FAge!="SY" & !is.na(FAge))
+parametersUnExp <- parameters %>% filter(is.na(experiment))
+parametersUnExpSY <- parametersUnExp %>% filter(FAge=="SY")
+parametersUnExpASY <- parametersUnExp %>% filter(FAge!="SY" & !is.na(FAge))
+
+
+mean(parametersExp$clutch, na.rm = T) #5.28461
+mean(parametersExpSY$clutch, na.rm=T) #4.976
+mean(parametersExpASY$clutch, na.rm=T) #5.340691
+
+mean(parametersUnExp$clutch, na.rm = T) #5.264358
+mean(parametersUnExpSY$clutch, na.rm = T) #4.944444
+mean(parametersUnExpASY$clutch, na.rm = T) #5.362633
+
+#Experiment doesn't really make a difference to clutch size
+hatchparametersExp <- parametersExp %>% filter (clutch>0 & !is.na(hatch))
+hatchparametersExpSY <- parametersExpSY %>% filter (clutch>0 & !is.na(hatch))
+hatchparametersExpASY <- parametersExpASY %>% filter (clutch>0 & !is.na(hatch))
+
+hatchparametersUnExp <- parametersUnExp %>% filter (clutch>0 & !is.na(hatch))
+hatchparametersUnExpSY <- parametersUnExpSY %>% filter (clutch>0 & !is.na(hatch))
+hatchparametersUnExpASY <- parametersUnExpASY %>% filter (clutch>0 & !is.na(hatch))
+
+mean(hatchparametersExp$hatch/hatchparametersExp$clutch) #0.7435187
+mean(hatchparametersExpSY$hatch/hatchparametersExpSY$clutch) #0.7624393
+mean(hatchparametersExpASY$hatch/hatchparametersExpASY$clutch) #0.7481205
+
+mean(hatchparametersUnExp$hatch/hatchparametersUnExp$clutch) #0.7383338
+mean(hatchparametersUnExpSY$hatch/hatchparametersUnExpSY$clutch) #0.7451074
+mean(hatchparametersUnExpASY$hatch/hatchparametersUnExpASY$clutch) #0.7552444
+#Eh maybe very slightly but overall not much difference to hatch success
+
+
+fledgeparametersExp <- parametersExp %>% filter(hatch>0 & !is.na(fledge))
+fledgeparametersExpSY <- parametersExpSY %>% filter(hatch>0 & !is.na(fledge))
+fledgeparametersExpASY <- parametersExpASY %>% filter(hatch>0 & !is.na(fledge))
+fledgeparametersUnExp <- parametersUnExp %>% filter(hatch>0 & !is.na(fledge))
+fledgeparametersUnExpSY <- parametersUnExpSY %>% filter(hatch>0 & !is.na(fledge))
+fledgeparametersUnExpASY <- parametersUnExpASY %>% filter(hatch>0 & !is.na(fledge))
+
+mean(fledgeparametersExp$fledge/fledgeparametersExp$hatch) #0.6404473
+mean(fledgeparametersExpSY$fledge/fledgeparametersExpSY$hatch) #0.6147503
+mean(fledgeparametersExpASY$fledge/fledgeparametersExpASY$hatch) #0.64047
+mean(fledgeparametersUnExp$fledge/fledgeparametersUnExp$hatch) #0.6226796
+mean(fledgeparametersUnExpSY$fledge/fledgeparametersUnExpSY$hatch) #0.5778127
+mean(fledgeparametersUnExpASY$fledge/fledgeparametersUnExpASY$hatch) #0.6330943
+#SY birds are fledging more nestlings in the experimental group than the non-experiemental birds
 
 ##########################################################
 #OK now I have all the relevent rates so now I want to create the matrices and put them into a analysis

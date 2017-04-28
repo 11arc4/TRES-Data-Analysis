@@ -43,6 +43,8 @@ dummy$Sex[which(datMark$Sex==7)] <- "U"
 
 datMark <- data.frame(dummy$Ch, dummy$ageAtFirstSight, dummy$sex)
 colnames(datMark) <- c("ch", "AgeAtFirstSight", "Sex")
+
+levels(datMark$AgeAtFirstSight)
 datMark$FirstSighting[which(datMark$AgeAtFirstSight=="HY")] <- "Nestling"
 datMark$FirstSighting[which(datMark$AgeAtFirstSight!="HY")] <- "Adult"
 datMark$FirstSighting <- as.factor(datMark$FirstSighting)
@@ -98,10 +100,10 @@ tsprocess <- process.data(datMark_F,model="CJS",begin.time=1975, groups= ("age")
 #2, 1) instead (it's done alphabetically) That condensed the data into that form
 #where you have the different numbers of times you've seen a particular capture
 #probability. Now I need to make the data in the right format for a CJS model
-ts.ddl<- make.design.data(tsprocess, parameters=list(Phi=list(age.bins=c(1, 2)),
-                                                     p=list(age.bins=c(1,2)))) 
-#may ultimately want to set age.bins but I don't really understand how to use
-#that feature yet
+ts.ddl<- make.design.data(tsprocess, parameters=list(Phi=list(age.bins=c(1, 2, 42)),
+                                                     p=list(age.bins=c(1,2, 42)))) 
+
+#Settin age bins to look at birds from 1-2 (SY) and then over 2 (ASY)
 
 #Now there are a number of different models that I would really like to run
 
@@ -110,7 +112,10 @@ ts.ddl<- make.design.data(tsprocess, parameters=list(Phi=list(age.bins=c(1, 2)),
 #what might be influencing both capture success and survival. Also make AgeAtFirstSight ()
 #I'm going to simplify this even further so that you are either an adult or a neslting at first sighting. 
 
-#I KNOW that we caught different numbers of birds each year so time should go in all the capture probabilities.
+#I KNOW that we caught different numbers of birds each year so time should go in
+#all the capture probabilities. We might also be more likely to catch a ASY bird
+#than a SY birds (that's what the nestling records show) but since SY is the
+#first time we'd catch these birds we can't look at that.
 p.time <- list(formula= ~time)
 p.dot <- list(formula= ~1)
 
@@ -118,9 +123,9 @@ p.dot <- list(formula= ~1)
 
 phi.dot <- list(formula= ~1) #if survival is constant in all cases
 phi.Time <- list(formula=~Time) #if survival rates change over the years
-phi.Age <- list(formula=~Age) #If older birds (based on having seen them previously, not their known age) have lower survival
-phi.Age.Time <- list(formula=~Time*Age) #if both age (based on sight history) have an effecct
-phi.Age.plus.Time <- list(formula=~Time+Age)
+phi.Age <- list(formula=~age) #If older birds (based on having seen them previously, not their known age) have lower survival
+phi.Age.Time <- list(formula=~Time*age) #if both age (based on sight history) have an effecct
+phi.Age.plus.Time <- list(formula=~Time+age)
 #I'll pick the best one of these and then see if interactions are of any importance. 
 
 
@@ -132,17 +137,11 @@ ts2 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Time, p=p.dot), 
 ts3 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age, p=p.dot), output=F, adjust=F) 
 ts4 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.Time, p=p.dot), output=F, adjust=F)
 ts5 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.plus.Time, p=p.dot), output = F, adjust=F)
-
 ts6 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.dot, p=p.time), output=F, adjust=F)
-#this is the model where all adult birds have constant survival across years, but time has different capture pobabilities
-#phi = 0.3582621
 ts7 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Time, p=p.time), output=F, adjust=F)
 ts8 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age, p=p.time), output=F, adjust=F) 
 #Based on the model that seperates ASY and SY return but averages over the years (second best model )
 #logit link so we have to take exp
-SYreturn8 <- exp(-1.1886984)
-ASYreturn8 <- exp(-1.1886984+0.2324945)
-
 
 ts9 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.Time, p=p.time), output=F, adjust=F)
 ts10 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.plus.Time, p=p.time), output = F, adjust=F)
@@ -158,10 +157,59 @@ ts.cjs.results <- collect.models()
 modelaverage <- model.average(ts.cjs.results)
 
 remove.mark(ts.cjs.results)
+
+
+
+
+
 ##################
-#Now lets do an analysis of the nestlings
+#Now lets do an analysis of the nestlings. I will again bin the ages. 
 
 ndummy <- dummy %>% filter(ageAtFirstSight=="HY")
+#This is looking at all of the nestlings for each year that were banded at day
+#12 and then fledged and then either recruited or did not. If we want to
+#seperate out recruitment death prior to fledging we need to remove all the
+#entries for each year where a bird was seen as a nestling and then did not
+#fledge. IE we should not have more sightings of nestlings per year than birds fledged that year. 
+
+
+latedeath <- as.data.frame(matrix(nrow=length(as.list(globalData$nests)), ncol=4))
+colnames(latedeath)<- c("year", "nestID", "banded", "fledge")
+r<- 0
+for (nest in as.list(globalData$nests)){
+  r<- r+1 
+  latedeath$fledge[r] <- nest$fledgeSize
+  latedeath$year[r] <- nest$year
+  latedeath$nestID[r] <- nest$siteID
+  banded <- 0
+  if(nest$nestlings$length>0){
+    for (nstgptr in nest$nestlings$as.list()){
+      nestling <- get(nstgptr$m_key, globalData$nestlings)
+      if(!is.na(nestling$nestlingTRES$m_key)){
+        banded <- banded+1
+      }
+    }
+  }
+  latedeath$banded[r] <- banded 
+}
+latedeath$diedbeforefledge <- latedeath$banded-latedeath$fledge
+
+
+
+ndummy
+
+c <- 0
+for (i in 1975:2016){
+  c<- c+1 
+  diedbeforefledge <- sum(latedeath$diedbeforefledge[which(latedeath$year==i & latedeath$diedbeforefledge>0)], na.rm=T) #number of nestlings that we banded in a nest and then know died before fledging
+  fledgedwithoutbands <- -sum(latedeath$diedbeforefledge[which(latedeath$year==i & latedeath$diedbeforefledge<0)])
+  if(diedbeforefledge>0){
+    #pick out all the capture records that were seen ONLY as nestings and remove some of those that I know actually died before fledging. 
+    ndummy <- ndummy[-c(which(ndummy[,c]==1 & rowSums(ndummy[1:42])==1)[1:diedbeforefledge]),]
+  }
+}
+
+
 
 ndummy$Ch <- apply(ndummy[,1:42], 1, paste, collapse="")
 datMark_nestling <- data.frame(ndummy$Ch, ndummy$ageAtFirstSight,  ndummy$sex)
@@ -177,13 +225,22 @@ nestling.ddl<- make.design.data(nestlingprocess, parameters=list(Phi=list(age.bi
 #again we are binning the ages into HY, SY and ASY (AHY will be assigned 1 just like SY) ie age 0, 1, and 2-13
 
 
-#Now we need to make the capture functions (p). Capture will also depend on sex
-#but I'm a bit unsure how to take that into account since I don't know the sex
-#for so many of the birds..... it's also super biased because I only know the sex for birds that survived.....
+#Now we need to make the capture functions (p). Capture will also depend on sex 
+#but I'm a bit unsure how to take that into account since I don't know the sex 
+#for so many of the birds..... it's also super biased because I only know the
+#sex for birds that survived..... If birds are likely to be kicked off the grid
+#when they are SY because they're subordinant, then we might expect age to
+#affect capture function as well
 p.time <- list(formula= ~time)
 p.dot <- list(formula= ~1)
+p.age <- list(formula= ~age)
+p.age.time <- list(formula= ~age*time)
+p.age.plus.time <- list(formula= ~age+time)
 
-#Now lets make the survival functions (phi)
+#Now lets make the survival functions (phi) using a sin link function helps us
+#estimate boundary values but you can't use a sin link without an identity
+#matrix. May want to set survival to 0 in instances where we never saw a bird
+#live longer than that?
 phi.dot <- list(formula= ~1) #if survival is constant in all cases
 phi.Time <- list(formula=~Time) #if survival rates change over the years
 phi.age <- list(formula=~age) #If older birds (based on having seen them previously, not their known age) have lower survival
@@ -191,19 +248,65 @@ phi.age.Time <- list(formula=~Time*age) #if both age (based on sight history) ha
 phi.age.plus.Time <- list(formula=~Time+age)
 
 
-n1 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.time), output = F, adjust=F)
-n2 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.time), output = F, adjust=F)
-n3 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.time), output = F, adjust=F)
+n1 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.time), output = F, adjust=T)
+n2 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.time), output = F, adjust=T)
+n3 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.time), output = F, adjust=T)
 #this is the best model that doesn't include a time variable survival
+n4 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.time), output = F, adjust=T)
+n5 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.time), output = F, adjust=T)
 
-n4 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.time), output = F, adjust=F)
-n5 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.time), output = F, adjust=F)
+n6 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.dot), output = F, adjust=T)
+n7 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.dot), output = F, adjust=T)
+n8 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.dot), output = F, adjust=T)
+n9 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.dot), output = F, adjust=T)
+n10 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.dot), output = F, adjust=T)
 
-n6 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.dot), output = F, adjust=F)
-n7 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.dot), output = F, adjust=F)
-n8 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.dot), output = F, adjust=F)
-n9 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.dot), output = F, adjust=F)
-n10 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.dot), output = F, adjust=F)
+
+n11 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.age), output = F, adjust=T)
+n12 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.age), output = F, adjust=T)
+n13 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.age), output = F, adjust=T)
+n14 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.age), output = F, adjust=T)
+n15 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.age), output = F, adjust=T)
+
+
+n16 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.age.plus.time), output = F, adjust=T)
+n17 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.age.plus.time), output = F, adjust=T)
+n18 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.age.plus.time), output = F, adjust=T)
+#this is the best of the models! survival also doesn't change with time so
+#that's best for the mark recapture stuff. It's the only model good for mark
+#recapture that have delta AIC below 6
+n19 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.age.plus.time), output = F, adjust=T)
+n20 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.age.plus.time), output = F, adjust=T)
+
+
+
+n21 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.age.time), output = F, adjust=T)
+n22 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.age.time), output = F, adjust=T)
+n23 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.age.time), output = F, adjust=T)
+n24 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.age.time), output = F, adjust=T)
+n25 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.age.time), output = F, adjust=T)
 
 
 nestling.cjs.results <- collect.models()
+#All the top models include age and time in the capture probability. Age is
+#definitely in the survival, but Time is only in two of the top 3 models.
+
+rm(n1,n2,n3,n4,n5,n6,n7,n8,n9,n10,n11,n12,n13,n14,n15,n16,n17,n18,n19,n20,n21,n22,n23,n24,n25)
+##################
+#Now lets do an analysis of the nestlings and adults. I will again bin the ages. 
+datMark<- as.data.frame(datMark_adult, datMark_nestling) #the data that I will be using for this analysis
+
+
+
+datMark$age[which(datMark$AgeAtFirstSight=="HY")]<- 0
+datMark$age[which(datMark$AgeAtFirstSight=="AHY")]<- 1
+datMark$age[which(datMark$AgeAtFirstSight=="SY")]<- 1
+datMark$age[which(datMark$AgeAtFirstSight=="ASY")]<- 2
+
+class(datMark$age)
+
+nestlingprocess <- process.data(datMark_nestling,model="CJS",begin.time=1975, groups= c("age", "sex"), initial.ages =c(0,1,2))
+#initial age is c(AHY, ASY, HY, SY) so initial ages are c(1, 2, 0, 1)
+nestling.ddl<- make.design.data(nestlingprocess, parameters=list(Phi=list(age.bins=c(0,1, 2, 42)),
+                                                                 p=list(age.bins=c(0,1,2,42)))) 
+#again we are binning the ages into HY, SY and ASY (AHY will be assigned 1 just like SY) ie age 0, 1, and 2-13
