@@ -38,7 +38,7 @@ for (bird in as.list(globalData$birds)){
 #Now let's make this dummy dataset into a data set that's in the right format for RMark. 
 
 dummy$Ch <- apply(dummy[,1:42], 1, paste, collapse="")
-dummy$Sex[which(datMark$Sex==7)] <- "U"
+dummy$Sex[which(dummy$Sex==7)] <- "U"
 
 
 datMark <- data.frame(dummy$Ch, dummy$ageAtFirstSight, dummy$sex)
@@ -136,15 +136,31 @@ ts1 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.dot, p=p.dot), o
 ts2 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Time, p=p.dot), output=F, adjust=F)
 ts3 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age, p=p.dot), output=F, adjust=F) 
 ts4 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.Time, p=p.dot), output=F, adjust=F)
+#second best model includes time age interactions in survival
 ts5 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.plus.Time, p=p.dot), output = F, adjust=F)
 ts6 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.dot, p=p.time), output=F, adjust=F)
 ts7 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Time, p=p.time), output=F, adjust=F)
 ts8 <-  mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age, p=p.time), output=F, adjust=F) 
-#Based on the model that seperates ASY and SY return but averages over the years (second best model )
-#logit link so we have to take exp
-
+#Based on the model that seperates ASY and SY return but averages over the years-- best model that I will use for the vital rates analysis!
 ts9 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.Time, p=p.time), output=F, adjust=F)
 ts10 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.plus.Time, p=p.time), output = F, adjust=F)
+
+
+#Just for the Vital Rates Analayis I need to get yearly estimates of survival!
+phi.Age.plus.time <- list(formula=~time+age)
+phi.Age.time <- list(formula=~time*age)
+phi.time <- list(formula=~time)
+
+ts_vitalRates1 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.plus.time, p=p.time), output = F, adjust=F)
+ts_vitalRates2 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.plus.time, p=p.dot), output = F, adjust=F)
+ts_vitalRates3 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.time, p=p.time), output = F, adjust=F)
+ts_vitalRates4 <- mark(tsprocess, ts.ddl, model.parameters = list(Phi=phi.Age.time, p=p.dot), output = F, adjust=F)
+#also need to compare these to if we have no parameters, (ts1 and ts5), or if we
+#have only age in sugriva, (ts3, and ts8) In that case by far the best most is
+#model ts_vitalRates1, so I will pull numbers out of that for my vital rates
+#correlation stuff.
+
+
 
 
 #Use this to compare models For many of these models MARK underestimates the
@@ -294,6 +310,7 @@ nestling.cjs.results <- collect.models()
 rm(n1,n2,n3,n4,n5,n6,n7,n8,n9,n10,n11,n12,n13,n14,n15,n16,n17,n18,n19,n20,n21,n22,n23,n24,n25)
 ##################
 #Now lets do an analysis of the nestlings and adults. I will again bin the ages. 
+
 datMark<- as.data.frame(datMark_adult, datMark_nestling) #the data that I will be using for this analysis
 
 
@@ -309,4 +326,4 @@ nestlingprocess <- process.data(datMark_nestling,model="CJS",begin.time=1975, gr
 #initial age is c(AHY, ASY, HY, SY) so initial ages are c(1, 2, 0, 1)
 nestling.ddl<- make.design.data(nestlingprocess, parameters=list(Phi=list(age.bins=c(0,1, 2, 42)),
                                                                  p=list(age.bins=c(0,1,2,42)))) 
-#again we are binning the ages into HY, SY and ASY (AHY will be assigned 1 just like SY) ie age 0, 1, and 2-13
+#again we are binning the ages into HY, SY and ASY (AHY will be assigned 1 just like SY) ie age 0, 1, and 2+
