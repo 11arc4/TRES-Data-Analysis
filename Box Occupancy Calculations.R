@@ -60,7 +60,7 @@ BirdNumb$BGBirdTotal<-gridlist[[6]] + gridlist[[7]]
 
 
 #Calculating Box and Territory Availability for each year
-BoxesAndTerritories<- read.csv(paste(outerdir, "Box Occupancy 1975-2016.csv", sep="/"), 
+BoxesAndTerritories<- read.csv(paste(outerdir, "Box Occupancy 1975-2017.csv", sep="/"), 
                                as.is=TRUE, na.strings = c("", "NA"))
 rownames(BoxesAndTerritories)<-BoxesAndTerritories$Year
 BoxesAndTerritories<- subset(BoxesAndTerritories, select= -c(Year))
@@ -104,6 +104,7 @@ NBTerritories <- unname(unlist(Terr["Newbarn Territory", ]))
 NESTerritories <- unname(unlist(Terr["North East Sanctuary Territory", ]))
 SPTerritories <- unname(unlist(Terr["Sandpit Territory", ]))
 SRBTerritories <- unname(unlist(Terr["SRB Territory", ]))
+
 #These territories include BG, GC, and Seans Grid boxes!  SG doesn't have it's
 #own territories because they were just added in to make BG territories have 2
 #boxes. IE their territories are already counted if we look at just BG boxes
@@ -111,7 +112,7 @@ BGTerritories <-unname(unlist(Terr["Bridgets/Golf Course Territory", ])) + unnam
 
 
 
-Year<-seq(from=1975, to= 2016, by=1)
+Year<-seq(from=1975, to= 2017, by=1)
 
 
 Availability <- data.frame(row.names=Year, YearlyTerr, YearlyBoxes, 
@@ -267,13 +268,19 @@ allgridTerrGraph <- baseTerrGraph +
 
 
 PresentationBoxOcc <-ggplot(BoxOccupancy, aes(x=Year, y= value), show.legend=F)+
-  geom_point(aes(Year, y=BoxOccTotal, color="BoxOccTotal"), show.legend = F)+
-  stat_smooth(aes(Year, y=BoxOccTotal, color="BoxOccTotal"), show.legend = F)+
+  geom_point(aes(Year, y=100 *BoxOccTotal ),color="deepskyblue4", show.legend = F, size=2)+
+  stat_smooth(aes(Year, y=100 *BoxOccTotal), color="deepskyblue4", show.legend = F)+
   xlab ("Year") +
-  ylab ("Box Occupancy") +
+  ylab ("Population Size \n (% box occupancy)") +
   theme_classic()+
-  theme(text = element_text(size=20), axis.title.y = element_text(angle=0, vjust=0.5))
+  theme(text = element_text(size=20), axis.title.y = element_text(angle=0, vjust=0.5))+
+  scale_x_continuous(breaks=seq(1975, 2017, 5))+
+  scale_y_continuous(breaks=seq(0, 100, 20))+
+  geom_point(aes(x=2017, y= 75), color="deepskyblue4", show.legend = F, size=8, shape=1)+ #Circles 2017!
+  annotate("text", x = 2012, y = 84, label = "2017 has the highest \n box occupancy since 2000!", size=5) #Adds label for 2017
+
+
 setwd("~/Masters Thesis Project/Basic Figures")
-png(filename="Basic Box Occupancy.png", width=600, height=400)
+png(filename="Basic Box Occupancy.png", width=800, height=400)
 PresentationBoxOcc
 dev.off()
