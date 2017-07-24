@@ -106,7 +106,7 @@ l= mean(PopData$hatchRate)
 
 plot(clutchSize~year, data=PopData)
 shapiro.test(PopData$clutchSize) #can totally use a normal distribution
-plot(averageNests~year, data=PopData)
+plot(averageNests~year, data=PopData, ylim=c(0.8, 1.5))
 shapiro.test(PopData$averageNests) #not normal
 fitdistrplus::descdist(PopData$averageNests-1, discrete = F) 
 #looks like a beta but we range from 1 to 1.94, so that's impossible.... One way
@@ -134,11 +134,12 @@ ASYReturn <-0.4599774 #ts8$results$real$estimate[2]
 ASYReturnSE <-0.0154843 #ts8$results$real$se[2] 
 
 
-
+ts_vitalRates1$results$real$estimate #THese are all the estimates
+ts_vitalRates1$results$real
 
 #Vital Rates analysis drawing repeatedly from the known distributions
 #Currently we are not seperating out SY and ASY clutch sizes etc, even though ultimately we may want to. 
-vrdat <- as.data.frame(matrix(nrow=100, ncol=9))
+vrdat <- as.data.frame(matrix(nrow=10000, ncol=9)) #Doing 10,000 because that's what Taylor et al 2012 did)
 colnames(vrdat)<- c("hatchrate", "fledgerate", "recruitrate", "eggRecruitRate", "clutchSize", "averageNests", "SYReturn", "ASYReturn", "lambda" )
 
 stages <- c("egg", "SY", "ASY")
@@ -190,3 +191,57 @@ plot(lambda~recruitrate, data=vrdat) #There's so little variation in the recruit
 plot(lambda~hatchrate, data=vrdat) #I think this means that you need both hatchrate and fledgerate to be high
 plot(lambda~fledgerate, data=vrdat) 
 
+
+
+#Now I use a simple linear regression to figure out what the correlation
+#coefficients are most sensitive following Taylow et al. 2012
+modASYReturn <- lm(lambda~ ASYReturn, data=vrdat)
+summary(modASYReturn) #Adjusted R^2 = 0.00105 so quite unimportant
+
+modSYReturn <- lm(lambda~ SYReturn, data=vrdat)
+summary(modSYReturn) # Adjusted R^2 = 0.0006235 so even less important
+
+modEggtoAdult <- lm(lambda~eggRecruitRate, data=vrdat)
+summary(modEggtoAdult) #Adjusted R^2 = 0.8684 so explains almost all the variation!
+#What within this explains variation? 
+modClutchSize <- lm(lambda ~ clutchSize, data=vrdat)
+summary(modClutchSize) #Adjusted R^2 = 0.00403 so it's not that!
+
+modAverageNests<- lm(lambda ~ averageNests, data=vrdat) 
+summary(modAverageNests) #Adjusted R^2 =0.04863, better but not a whole lot of the variation
+
+modHatch <- lm(lambda ~ hatchrate, data=vrdat)
+summary(modHatch) # Adjussted R^2 =0.5094 so that's a huge portion of the variation!!!
+
+modFledge <- lm (lambda ~fledgerate, data=vrdat)
+summary(modFledge) #Adjusted R^2 =0.3212 so another large portion of the variation, 
+
+
+#Now I use a log-log transformed regression to figure out what aspects have the
+#highest elasticity This is a probelm though because my lambdas are negative and
+#I can't log a negative number
+
+
+
+#Are there inherent correlations between 
+cor(PopData, method = "pearson", use="complete.obs")
+res2 <-rcorr(as.matrix(PopData), type = c("pearson"))
+#Borrowed from online--makes the matrices readable....
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+  )
+}
+
+flattenCorrMatrix(res2$r, res2$P)
+#None of the parameters correlate significantly with each other so it's safe to not include correlation structure in the vital rates analysis
+
+
+#I'd really like to include esimates of survival into that. SO for that I guess
+#I need a RMARK analysis that estimates a survival probability for each year
+#huh? THey're very likely correlated because they are all exposed to the same
+#conditions
