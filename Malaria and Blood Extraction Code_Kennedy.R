@@ -1,9 +1,9 @@
 
-maldat<- as.data.frame(matrix(nrow=4000, ncol=19))
+maldat<- as.data.frame(matrix(nrow=4000, ncol=20))
 colnames(maldat)<- c("BirdID", "Year", "Age", "Sex", "Infected", "BloodInFreezer", "Mass", "Tarsus", 
                      "Wing", "NestboxID", "Renest", "ClutchSize", "FirstEggDate", 
                      "LastEggDate", "HatchSize", "HatchDate", "FledgeSize", "FledgeDate",
-                     "WhyFailure")
+                     "WhyFailure", "Experiment")
 #Naming table titles
 
 #For statement does the bird have any blood collected?
@@ -70,6 +70,7 @@ for (bird in as.list(globalData$birds)){
         maldat$FledgeSize[r]<- nest$fledgeSize
         maldat$FledgeDate[r]<- nest$fledgeDate
         maldat$WhyFailure[r]<- nest$reasonforFailure
+        maldat$Experiment[r]<- nest$experiment
       }
       
     }
@@ -78,15 +79,83 @@ for (bird in as.list(globalData$birds)){
 }
 write.csv(maldat, file="Malaria Data Extraction.csv", na="", row.names = F)
 
-
+maldat$Infected<- as.factor(maldat$Infected)
 
 
 fullDataAvail <- maldat %>% filter( (!is.na(Infected) | BloodInFreezer=="Yes")  & Age != "HY", Sex != "U", !is.na(ClutchSize), !is.na(HatchSize), !is.na(FledgeSize) )
 hist(fullDataAvail$Year, xlim=c(1988, 2016), breaks=28)
 
 TestedData<- maldat %>% filter( !is.na(Infected)   & Age != "HY", Sex != "U", !is.na(ClutchSize), !is.na(HatchSize), !is.na(FledgeSize) )
-hist(TestedData$Year, xlim=c(1988, 2016), breaks=28)
+hist(TestedData$Year, xlim=c(1988, 2016), ylim=c(0, 30), breaks=28)
 
 UntestedFreezerSamples<- maldat %>% filter( BloodInFreezer=="Yes"   & Age != "HY", Sex != "U", !is.na(ClutchSize), !is.na(HatchSize), !is.na(FledgeSize) )
 hist(UntestedFreezerSamples$Year, xlim=c(1988, 2016), breaks=28)
 #Hmmm we have a lot of a couple of years but really not much to fill in the gaps-- I think this likely means that there is a hell of a lot more blood available that we just haven't catalogued yet. 
+
+
+NestlingUntested <- maldat %>% filter( BloodInFreezer=="Yes"   & Age == "HY")
+hist(NestlingUntested$Year, xlim=c(1988, 2016), breaks=28)
+
+
+TestedData_alladult<- maldat %>% filter( !is.na(Infected)   & Age != "HY" )
+hist(TestedData_alladult$Year, xlim=c(1988, 2016),ylim=c(0, 30), breaks=28)
+
+
+
+#If the bird was from a control nest then we didn't manipulate it and it can be included easily
+maldat$Experiment [which(maldat$Experiment=="Control" | maldat$Experiment=="C")]<- NA
+#ONLY USING THE NEST THAT WEREN'T EXPERIMENTED WITH. ULTIMATELY MAY BE ABLE TO
+#USE NESTS THAT WERE EXPERIMENTED WITH DEPENDING ON THE EXPERIMENT BUT FOR NOW
+#WE'LL PLAY IT SUPER SAFE
+FMalDat <- maldat%>% filter(Sex=="F" & !is.na(Infected)&is.na(Experiment))
+MMalDat <- maldat%>% filter(Sex=="M" & !is.na(Infected)& is.na(Experiment))
+
+ggplot(data=FMalDat, aes(x=Infected, y=ClutchSize))+
+  geom_boxplot()+
+  geom_jitter()+
+  ggtitle("Females")
+
+ggplot(data=MMalDat, aes(x=Infected, y=ClutchSize))+
+  geom_boxplot()+
+  geom_jitter()+
+  ggtitle("Males")
+
+ggplot(data=MMalDat, aes(x=Year, y=ClutchSize, color=Infected))+
+  geom_jitter()+
+  geom_smooth()+
+  ggtitle("Males")
+
+ggplot(data=FMalDat, aes(x=Year, y=ClutchSize, color=Infected))+
+  geom_jitter()+
+  geom_smooth()+
+  ggtitle("Females")
+#clutchsize might be trending downward in uninfected females?
+
+
+
+FClutchDat <- FMalDat %>% filter(!is.na(Age) & !is.na(Year) &!is.na(ClutchSize))
+mod <- glm(ClutchSize~Infected*Age*Year, data=FClutchDat, family="poisson" )
+plot(mod)
+#There are a number of leverage points but otherwise things look pretty decent!
+#Scale location plot could be better but also could be worse
+
+plot(resid(mod)~FClutchDat$Infected) #perfect
+plot(resid(mod)~FClutchDat$Year) #That also looks fine to me
+plot(resid(mod)~as.factor(FClutchDat$Age)) 
+
+
+FClutchDat$Age2 [which(FClutchDat$Age=="SY")]<- "SY"
+FClutchDat$Age2 [which(FClutchDat$Age!="SY")]<- "ASY"
+
+
+mod <- glm(ClutchSize~Infected*Age2*Year, data=FClutchDat, family="poisson" )
+#Scale location plot is still kind of shitty but perhaps we can fix that. Not 
+#really sure why the residuals are spread wider for larger predicted values. If
+#you ignore the red line and focus on the dots its not that bad looking
+plot(resid(mod)~as.factor(FClutchDat$Age2)) #looks good as do the other plots
+#I think this one is a decent fit!
+
+Anova(mod) #Wow nothing is significant at all!
+options(na.action = "na.fail")
+dredge(mod)
+#OK so again nothing is in the top model but infected and age are both in the best models group so maybe all is not lost!
