@@ -177,6 +177,9 @@ t.test(hatchParASY$hatch/hatchParASY$clutch, hatchParSY$hatch/ hatchParSY$clutch
 #Fledge rate
 fledgePar <- parameters %>% filter (hatch>0 & !is.na(fledge))
 fledgerate <- mean(fledgePar$fledge/fledgePar$hatch) #0.628297
+
+
+
 #Does fledge success vary by female age?
 fledgeParSY <- fledgePar %>% filter(FAge=="SY")
 fledgerateSY <- mean(fledgeParSY$fledge/fledgeParSY$hatch) #0.5870798
