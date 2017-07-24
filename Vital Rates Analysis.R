@@ -145,29 +145,12 @@ plot(SYclutch~year, data=yearlyParam)
 plot(ASYclutch~year, data=yearlyParam)
 plot(hatchrate~year, data=yearlyParam)
 plot(fledgerate~year, data=yearlyParam)
-
-
-hist(yearlyParam$hatchrate)
-abline(v=mean(yearlyParam$hatchrate), col="red")
-abline(v=mean(yearlyParam$hatchrate)+sd(yearlyParam$hatchrate), col="blue")
-abline(v=mean(yearlyParam$hatchrate)-sd(yearlyParam$hatchrate), col="blue")
-
-mean(yearlyParam$hatchrate)
-sd(yearlyParam$hatchrate)
-shapiro.test(yearlyParam$hatchrate) #it's normal
-
-hist(yearlyParam$fledgerate)
-abline(v=mean(yearlyParam$fledgerate), col="red")
-abline(v=mean(yearlyParam$fledgerate)+sd(yearlyParam$fledgerate), col="blue")
-abline(v=mean(yearlyParam$fledgerate)-sd(yearlyParam$fledgerate), col="blue")
-
-mean(yearlyParam$fledgerate)
-sd(yearlyParam$fledgerate)
-shapiro.test(yearlyParam$fledgerate) #it's normal
-
-
-library(fitdistrplus)
-descdist(yearlyParam$SYclutch[which(!is.na(yearlyParam$SYclutch))],  discrete=T) #looks like a negative binomial 
-rnbinom(n=1, size= ??????, mu=5.063771)
-
-#Hmmmm Unsure how to get the best estimates for clutch size. Maybe could I mix the methods and use population level 
+# 
+# 
+# For clutch size a stretched beta distribution is commonly used (see Morris and
+# Doak book for parameterization), whereas hatching rate, and survival to
+# fledgling can be produced by beta distributions.
+# 
+# I'm curious if the product of random draws from these distributions produces
+# the bimodal pattern she observes in her data?  One thought if not, may be to
+# use a mixture distribution if a particular vital rate is truly bimodal.
