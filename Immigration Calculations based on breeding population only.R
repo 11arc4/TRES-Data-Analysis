@@ -5,8 +5,9 @@ library(ggplot2)
 
 outerdir<-"~/Masters Thesis Project/Tree Swallow Data/Amelia TRES data 1975-2016"
 
-BoxesAndTerritories<- read.csv(paste(outerdir, "Box Occupancy 1975-2016.csv", sep="/"), 
+BoxesAndTerritories<- read.csv(paste(outerdir, "Box Occupancy 1975-2017.csv", sep="/"), 
                                as.is=TRUE, na.strings = c("", "NA"))
+
 rownames(BoxesAndTerritories)<-BoxesAndTerritories$Year
 BoxesAndTerritories<- subset(BoxesAndTerritories, select= -c(Year))
 Box_rows<- which(grepl("Box", row.names(BoxesAndTerritories)))
@@ -16,7 +17,7 @@ Terr <- BoxesAndTerritories[Terr_rows,]
 
 
 
-years<- seq(from=1975, to=2016, by=1)
+years<- seq(from=1975, to=2017, by=1)
 
 Immigration <- data.frame(years)
 Immigration$TotalBoxes <- c()
@@ -155,7 +156,7 @@ mean((Immigration$EstimatePop - Immigration$UnknownReturnStatusBirds)/Immigratio
 mean((Immigration$FEstimatePop - Immigration$UnknownReturnStatusFemales)/Immigration$FEstimatePop)
 mean((Immigration$MEstimatePop - Immigration$UnknownReturnStatusMales)/Immigration$MEstimatePop)
 
-#catch about 50% of all birds, 64% of all males and 35% of males
+#catch about 50% of all birds, 64% of all females and 35% of males
 
 
 ggplot(Immigration, aes(x=years, y=NewBirdsCaught))+
