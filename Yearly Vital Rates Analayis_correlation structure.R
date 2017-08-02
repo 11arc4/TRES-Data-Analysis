@@ -184,7 +184,100 @@ plot(lambda~fledgerate, data=vrdat)  #fledge rate is important
 
 
 ############Now lets do a deterministic sensitivity analysis on this data
-#Calculate sensitivity
+
+#Calculate sensitivity according to Taylor et al. 2012 using the linear regression
+modASYReturn <- lm(lambda~ ASYReturn, data=vrdat)
+sumASY <- summary(modASYReturn) #Adjusted R^2 = 0.003741 so quite unimportant
+
+modSYReturn <- lm(lambda~ SYReturn, data=vrdat)
+sumSY <- summary(modSYReturn) # Adjusted R^2 = 0.002058 so even less important
+
+modClutchSize <- lm(lambda ~ clutchSize, data=vrdat)
+sumClutch<- summary(modClutchSize) #Adjusted R^2 = 0.001121 so it's not that!
+
+modAverageNests<- lm(lambda ~ averageNests, data=vrdat) 
+sumAverageNests <- summary(modAverageNests) #Adjusted R^2 =0.05254
+
+modEggtoAdult <- lm(lambda~eggRecruitRate, data=vrdat)
+sumEggtoAdult<- summary(modEggtoAdult) #Adjusted R^2 = 0.869 so explains almost all the variation!
+#What within this explains variation? 
+
+modHatch <- lm(lambda ~ hatchrate, data=vrdat)
+sumHatch<- summary(modHatch) # Adjussted R^2 =0.0231
+
+modFledge <- lm (lambda ~fledgerate, data=vrdat)
+sumFledge <- summary(modFledge) #Adjusted R^2 =0.092 so another large portion of the variation, 
+
+modRecruit <- lm(lambda~recruitrate, data=vrdat)
+sumRecruit <- summary(modRecruit) #R^2= 0.7669
 
 
+#Let's put all of those points onto a plot for visualizing just like Taylor et al 2012 did
+ggplot()+
+  xlab("Sensitivity")+
+  ylab(expression(paste("Adjusted R"^ 2)))+
+  geom_point(aes(x=modRecruit$coefficients[2], y=sumRecruit$adj.r.squared))+ #Add Recruitment
+  annotate("text",x=modRecruit$coefficients[2], y=sumRecruit$adj.r.squared-.02, label="Recruitment")+
+  geom_point(aes(x=modASYReturn$coefficients[2], y=sumASY$adj.r.squared))+ #add ASY return
+  annotate("text", x=modASYReturn$coefficients[2], y=sumASY$adj.r.squared+0.02, label="ASY Return")+
+  geom_point(aes(x=modSYReturn$coefficients[2], y=sumSY$adj.r.squared))+ #add SY return
+  annotate("text",x=modSYReturn$coefficients[2], y=sumSY$adj.r.squared-0.02, label="SY Return" )+
+  geom_point(aes(x=modAverageNests$coefficients[2], y=sumAverageNests$adj.r.squared)) + #add average nests
+  annotate("text",x=modAverageNests$coefficients[2], y=sumAverageNests$adj.r.squared-.02, label="Nest Attempts" )+
+  geom_point(aes(x=modClutchSize$coefficients[2], y=sumClutch$adj.r.squared))+ #add clutch size
+  annotate("text", x=modClutchSize$coefficients[2], y=sumClutch$adj.r.squared+.025, label="Clutch Size")+
+  geom_point(aes(x=modHatch$coefficients[2], y=sumHatch$adj.r.squared))+ #add Hatch size
+  annotate("text", x=modHatch$coefficients[2], y=sumHatch$adj.r.squared+.025, label="Hatch Rate")+
+  geom_point(aes(x=modFledge$coefficients[2], y=sumFledge$adj.r.squared))+ #add fledge rate
+  annotate("text",x=modFledge$coefficients[2], y=sumFledge$adj.r.squared+.025, label="Fledge Rate" )+
+  theme_classic()
+
+
+
+
+#Calculate Elasticity according to Taylor et al. 2012 using the linear regression of the log log transformation
+modASYReturn_elasticity <- lm(log(lambda)~ log(ASYReturn), data=vrdat)
+sumASY_e<- summary(modASYReturn_elasticity) #R^2=0.0001127
+
+modSYReturn_elasticity <- lm(log(lambda) ~ log(SYReturn), data=vrdat)
+sumSY_e <- summary(modSYReturn_elasticity) #R^2 = 0.0002805
+
+modClutchSize_elasticity <- lm(log(lambda) ~ log(clutchSize), data=vrdat)
+sumClutch_e<- summary(modClutchSize_elasticity) #Adjusted R^2 = 0.001229 so it's not that!
+
+modAverageNests_elasticity<- lm(log(lambda) ~ log(averageNests), data=vrdat) 
+sumAverageNests_e<- summary(modAverageNests_elasticity) #Adjusted R^2 =0.04861, better but not a whole lot of the variation
+
+modEggtoAdult_elasticity <- lm(log(lambda)~log(eggRecruitRate), data=vrdat)
+sumEggtoAdult_e <- summary(modEggtoAdult_elasticity) #R^2 = 0.5758
+
+modhatch_elasticity <- lm(log(lambda)~log(hatchrate), data=vrdat)
+sumHatch_e <- summary(modhatch_elasticity) #R^2 =0.01803 so low elasticity
+
+modFledge_elasticity <- lm (log(lambda) ~log(fledgerate), data=vrdat)
+ sumFledge_e <- summary(modFledge_elasticity) #Adjusted R^2 =0.08591 so another large portion of the variation, 
+
+modRecruit_elasticity <- lm(log(lambda)~log(recruitrate), data=vrdat)
+sumRecruit_e<- summary(modRecruit_elasticity) #r^2=0.5271
+
+
+
+ggplot()+
+  xlab("Elasticity")+
+  ylab(expression(paste("Adjusted R"^ 2)))+
+  geom_point(aes(x=modRecruit_elasticity$coefficients[2], y=sumRecruit_e$adj.r.squared))+ #Add Recruitment
+  annotate("text",x=modRecruit_elasticity$coefficients[2], y=sumRecruit_e$adj.r.squared-.02, label="Recruitment")+
+  geom_point(aes(x=modASYReturn_elasticity$coefficients[2], y=sumASY_e$adj.r.squared))+ #add ASY return
+  annotate("text", x=modASYReturn_elasticity$coefficients[2], y=sumASY_e$adj.r.squared+0.02, label="ASY Return")+
+  geom_point(aes(x=modSYReturn_elasticity$coefficients[2], y=sumSY_e$adj.r.squared))+ #add SY return
+  annotate("text",x=modSYReturn_elasticity$coefficients[2], y=sumSY_e$adj.r.squared-0.02, label="SY Return" )+
+  geom_point(aes(x=modAverageNests_elasticity$coefficients[2], y=sumAverageNests_e$adj.r.squared)) + #add average nests
+  annotate("text",x=modAverageNests_elasticity$coefficients[2], y=sumAverageNests_e$adj.r.squared-.02, label="Nest Attempts" )+
+  geom_point(aes(x=modClutchSize_elasticity$coefficients[2], y=sumClutch_e$adj.r.squared))+ #add clutch size
+  annotate("text", x=modClutchSize_elasticity$coefficients[2], y=sumClutch_e$adj.r.squared+.025, label="Clutch Size")+
+  geom_point(aes(x=modhatch_elasticity$coefficients[2], y=sumHatch_e$adj.r.squared))+ #add Hatch size
+  annotate("text", x=modhatch_elasticity$coefficients[2], y=sumHatch_e$adj.r.squared+.025, label="Hatch Rate")+
+  geom_point(aes(x=modFledge_elasticity$coefficients[2], y=sumFledge_e$adj.r.squared))+ #add fledge rate
+  annotate("text",x=modFledge_elasticity$coefficients[2], y=sumFledge_e$adj.r.squared+.025, label="Fledge Rate" )+
+  theme_classic()
 
