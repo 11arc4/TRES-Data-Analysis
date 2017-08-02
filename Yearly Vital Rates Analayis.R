@@ -36,14 +36,6 @@ fitdistrplus::descdist(PopData$averageNests-1, discrete = F)
 #for the first nest!) That works beautifully
 averageNestParameters<- estBetaParams(mu=mean(PopData$averageNests-1), var=var(PopData$averageNests-1))
 
-#These numbers are from the RMark script. They will likely need to be changed. 
-SYReturn <-0.294157 #ts8$results$real$estimate[1] 
-SYReturnSE <-0.0100714 #ts8$results$real$se[1] 
-
-
-ASYReturn <-0.4599774 #ts8$results$real$estimate[2] 
-ASYReturnSE <-0.0154843 #ts8$results$real$se[2] 
-
 
 #A better way to deal with the recruit and return rates would be to use the
 #estimates from the best RMark models using discrete time and then use those
@@ -78,7 +70,7 @@ ASYReturnParameters<- estBetaParams(mu=mean(PopData$ASYReturn, na.rm=T), var=var
 #Are there inherent correlations between the different vital rates that will
 #need to be taken into account when we generate randomly?
 cor(PopData, method = "pearson", use="complete.obs")
-res2 <-Hmisc::rcorr(as.matrix(PopData), type = c("pearson"))
+res2 <-Hmisc::rcorr(as.matrix(PopData[,2:ncol(PopData)]), type = c("pearson"))
 #Borrowed from online--makes the matrices readable....
 flattenCorrMatrix <- function(cormat, pmat) {
   ut <- upper.tri(cormat)
@@ -91,9 +83,11 @@ flattenCorrMatrix <- function(cormat, pmat) {
 }
 
 flattenCorrMatrix(res2$r, res2$P)
-#I will need to include a huge number of correlations in my matrix now!! Oh my
-#goodness. Survival correlates with pretty much everthing which makes a lot of sense. 
-
+#I will need to include a huge number of correlations in my matrix now!! Oh my 
+#goodness. Survival correlates with pretty much everthing which makes a lot of
+#sense. It's very interesting that reccruitment doesn't correlate with return
+#though. Maybe that means that nestlings aren't making it to the time period
+#that adults die at?
 
 
 
@@ -215,3 +209,19 @@ modRecruit_elasticity <- lm(log(lambda)~log(recruitrate), data=vrdat)
 summary(modRecruit_elasticity) #r^2=0.691
 
 #Keep in mind that this is still not including the correlation structure. 
+
+
+
+################################################################
+
+#So now I will reconduct that analysis, but this time I will include the underlying correlation structure. 
+corStruct <-  flattenCorrMatrix(res2$r, res2$P)
+str(corStruct)
+corStruct %>% filter(row!="year" & p<0.05) 
+corStruct$se<-sqrt((1-corStruct$cor^2)/(43-2)) #THis is an approximation of the SE I found online. 
+#Now I can set one of the 
+
+#This is very similar to what Doak et al. 1994 was doing with setting a 
+#correlation to E some unknown environmental condition in practice without the 
+#underlying math I believe 
+#See "Yearly Vital Rates Analysis_ Correlation Structure" for how we took this into account
