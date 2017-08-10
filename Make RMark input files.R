@@ -37,8 +37,6 @@ for (bird in as.list(globalData$birds)){
 #Now let's make this dummy dataset into a data set that's in the right format for RMark. 
 
 dummy$Ch <- apply(dummy[,1:43], 1, paste, collapse="")
-dummy$Sex[which(dummy$Sex==7)] <- "U"
-
 
 datMark <- data.frame(dummy$Ch, dummy$ageAtFirstSight, dummy$sex)
 colnames(datMark) <- c("ch", "AgeAtFirstSight", "Sex")
@@ -48,6 +46,9 @@ datMark$FirstSighting[which(datMark$AgeAtFirstSight=="HY")] <- "Nestling"
 datMark$FirstSighting[which(datMark$AgeAtFirstSight!="HY")] <- "Adult"
 datMark$FirstSighting <- as.factor(datMark$FirstSighting)
 datMark$ch <- as.character(datMark$ch)
+
+
+
 
 
 #I want a data set that is JUST adult bird sightings. I need to remove the first
@@ -151,4 +152,38 @@ datMark_nestling <- datMark_nestling %>% filter ("000000000000000000000000000000
 
 saveRDS(datMark_nestling, file="Nestling MARK Data.rda" )
 
+
+
+#I'd also like to have a mark file with all the data (excluding nestlings that
+#died before fledging) to try to get recruitment from
+
+datMarkAll
+
+dummyAll <- dummy
+c <- 0
+for (i in 1975:2017){
+  c<- c+1 
+  diedbeforefledge <- sum(latedeath$diedbeforefledge[which(latedeath$year==i & latedeath$diedbeforefledge>0)], na.rm=T) #number of nestlings that we banded in a nest and then know died before fledging
+  fledgedwithoutbands <- -sum(latedeath$diedbeforefledge[which(latedeath$year==i & latedeath$diedbeforefledge<0)])
+  if(diedbeforefledge>0){
+    #pick out all the capture records that were seen ONLY as nestings and remove some of those that I know actually died before fledging. 
+    dummyAll <- dummyAll[-c(which(dummyAll[,c]==1 & rowSums(dummyAll[1:43])==1)[1:diedbeforefledge]),]
+  }
+}
+
+
+
+datMarkAll <- data.frame(dummyAll$Ch, dummyAll$ageAtFirstSight, dummyAll$sex)
+colnames(datMarkAll) <- c("ch", "AgeAtFirstSight", "Sex")
+
+levels(datMarkAll$AgeAtFirstSight)
+
+datMarkAll$age <- rep(NA, nrow(datMarkAll))
+datMarkAll$age[which(datMarkAll$AgeAtFirstSight=="ASY")]<- 2
+datMarkAll$age[which(datMarkAll$AgeAtFirstSight=="SY" | datMarkAll$AgeAtFirstSight=="AHY")]<- 1
+datMarkAll$age[which(datMarkAll$AgeAtFirstSight=="HY")]<- 0
+
+
+datMarkAll$ch<- as.character(datMarkAll$ch)
+saveRDS(datMarkAll, file="All Birds MARK Data.rda" )
 
