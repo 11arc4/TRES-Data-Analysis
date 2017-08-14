@@ -3,6 +3,7 @@ setwd("~/Masters Thesis Project/TRES Data Analysis/RMark Preliminary Survival An
 library(RMark)
 library(dplyr)
 library(popbio)
+library(ggplot2)
 #Function to estimate the parameters for a beta distribution
 estBetaParams <- function(mu, var) {
   alpha <- ((1 - mu) / var - 1 / mu) * mu ^ 2
@@ -45,6 +46,12 @@ eigenUnOrdered <- function (x, symmetric, only.values = FALSE, EISPACK = FALSE)
 }
 #Read in the data, including all the different types of data from RMark
 PopData<- read.csv(file= "file:///C:/Users/Amelia/Documents/Masters Thesis Project/TRES Data Analysis/Matrix Pop Estimates/Yearly Vital Rates.csv", na.strings=c(""), as.is=T)
+#Need to get rid of all the columns that are specific to SY or ASY
+removeCol <- substring(colnames(PopData), nchar(colnames(PopData))-1, nchar(colnames(PopData)))
+
+PopData <- PopData[, which(removeCol !="SY")]
+  
+  
 nestlingMark <- readRDS( "Best MARK Results for Vital Rates Nestlings Analysis.rda")
 summary <- summary(nestlingMark)
 PopData$recruitment <- c(summary$reals$Phi$`Group:ageHY.sexU`[[1]][1,], NA) #doesn't matter which sex you choose because that wasn't allowed to change the survival (not enough data)

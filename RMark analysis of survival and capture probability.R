@@ -123,7 +123,7 @@ remove.mark(ts.cjs.results)
 #Now lets do an analysis of the nestlings. I will again bin the ages. 
 datMark_nestling<- readRDS("Nestling MARK Data.rda")
 
-nestlingprocess <- process.data(datMark_nestling,model="CJS",begin.time=1975, groups= c("age", "sex"), initial.ages =c(0))
+nestlingprocess <- process.data(datMark_nestling,model="CJS",begin.time=1975, groups= c("age"), initial.ages =c(0))
 #initial age for all the hatchlings is 0 because here I am only looking at those birds we first saw as nestlings
 nestling.ddl<- make.design.data(nestlingprocess, parameters=list(Phi=list(age.bins=c(0,1, 2, 43)),
                                                      p=list(age.bins=c(0,1,2,43)))) 
@@ -153,7 +153,6 @@ phi.age.plus.time <- list(formula=~time+age)
 n1 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.time), output = F, adjust=T)
 n2 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.time), output = F, adjust=T)
 n3 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.time), output = F, adjust=T)
-#this is the best model that doesn't include a time variable survival
 n4 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.time), output = F, adjust=T)
 n5 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.time), output = F, adjust=T)
 
@@ -176,6 +175,9 @@ n6_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.
 nestling.cjs.results <- collect.models()
 #Here there are multiple top models and model averaging will be more crucial but
 #there is only one top model with a discrete time so that's the one we'll use for the vital rates
-saveRDS(n5_vr, "Best MARK Results for Vital Rates Nestlings Analysis.rda")
-summary(n5_vr)
-##################
+saveRDS(n4_vr, "Best MARK Results for Vital Rates Nestlings Analysis.rda")
+summary(n4_vr)
+
+#I feel VERY uncomfortable using this model though. This isn't by any means the
+#best model and the parameterization is shite. I wonder if it might be better to
+#use the best model  #################
