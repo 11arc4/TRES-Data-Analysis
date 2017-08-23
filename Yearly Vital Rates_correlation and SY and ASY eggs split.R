@@ -47,7 +47,7 @@ eigenUnOrdered <- function (x, symmetric, only.values = FALSE, EISPACK = FALSE)
 }
 #Read in the data, including all the different types of data from RMark
 PopData<- read.csv(file= "file:///C:/Users/Amelia/Documents/Masters Thesis Project/TRES Data Analysis/Matrix Pop Estimates/Yearly Vital Rates.csv", na.strings=c(""), as.is=T)
-nestlingMark <- readRDS( "Best MARK Results for Vital Rates Nestlings Analysis.rda")
+nestlingMark <- readRDS( "Best MARK Results for Vital Rates Nestlings Analysis with discrete time variable.rda")
 summary <- summary(nestlingMark)
 PopData$recruitment <- c(summary$reals$Phi$`Group:ageHY.sexU`[[1]][1,], NA) #doesn't matter which sex you choose because that wasn't allowed to change the survival (not enough data)
 #there are a number of years that weren't parameterized properly-- you can tell because it's set to 1

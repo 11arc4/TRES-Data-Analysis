@@ -48,6 +48,7 @@ ts.ddl<- make.design.data(tsprocess, parameters=list(Phi=list(age.bins=c(1, 2, 4
 p.time <- list(formula= ~time)
 p.dot <- list(formula= ~1)
 
+
 #Survival probabilities might also vary by time but now they don't HAVE to, and
 #that time function is continuous (Time not time). 
 
@@ -138,6 +139,10 @@ nestling.ddl<- make.design.data(nestlingprocess, parameters=list(Phi=list(age.bi
 #affect capture function as well
 p.time <- list(formula= ~time)
 p.dot <- list(formula= ~1)
+p.timeplusage <- list(formula= ~time+age) #what if we don't do a good job catching recruits (ie maybe they are subordinant and aren't allowed boxes)?
+p.age <- list(formula= ~age)
+
+
 
 
 phi.dot <- list(formula= ~1) #if survival is constant in all cases
@@ -151,16 +156,29 @@ phi.age.time <- list(formula=~time*age)
 phi.age.plus.time <- list(formula=~time+age)
 
 n1 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.time), output = F, adjust=T)
-n2 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.time), output = F, adjust=T)
+#n2 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.time), output = F, adjust=T)
 n3 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.time), output = F, adjust=T)
-n4 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.time), output = F, adjust=T)
-n5 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.time), output = F, adjust=T)
+#n4 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.time), output = F, adjust=T)
+#n5 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.time), output = F, adjust=T)
 
 n6 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.dot), output = F, adjust=T)
-n7 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.dot), output = F, adjust=T)
+#n7 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.dot), output = F, adjust=T)
 n8 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.dot), output = F, adjust=T)
-n9 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.dot), output = F, adjust=T)
-n10 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.dot), output = F, adjust=T)
+#n9 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.dot), output = F, adjust=T)
+#n10 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.dot), output = F, adjust=T)
+
+n11 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.age), output = F, adjust=T)
+#n12 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.age), output = F, adjust=T)
+n13 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.age), output = F, adjust=T)
+#n14 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.age), output = F, adjust=T)
+#n15 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.age), output = F, adjust=T)
+
+n16 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.dot, p=p.timeplusage), output = F, adjust=T)
+#n17 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.Time, p=p.timeplusage), output = F, adjust=T)
+n18 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age, p=p.timeplusage), output = F, adjust=T)
+#n19 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.Time, p=p.timeplusage), output = F, adjust=T)
+#n20 <- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.Time, p=p.timeplusage), output = F, adjust=T)
+
 
 n1_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.time, p=p.time), output = F, adjust=T)
 n2_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.time, p=p.dot), output = F, adjust=T)
@@ -171,13 +189,36 @@ n4_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.
 n5_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.time, p=p.time), output = F, adjust=T)
 n6_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.time, p=p.dot), output = F, adjust=T)
 
+n7_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.time, p=p.age), output = F, adjust=T)
+n8_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.time, p=p.timeplusage), output = F, adjust=T)
+
+n9_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.time, p=p.age), output = F, adjust=T)
+n10_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.time, p=p.timeplusage), output = F, adjust=T)
+
+n11_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.time, p=p.age), output = F, adjust=T)
+n12_vr<- mark(nestlingprocess, nestling.ddl, model.parameters = list(Phi=phi.age.plus.time, p=p.timeplusage), output = F, adjust=T)
+
+
 
 nestling.cjs.results <- collect.models()
 #Here there are multiple top models and model averaging will be more crucial but
 #there is only one top model with a discrete time so that's the one we'll use for the vital rates
-saveRDS(n4_vr, "Best MARK Results for Vital Rates Nestlings Analysis.rda")
+saveRDS(n4_vr, "Best MARK Results for Vital Rates Nestlings Analysis with discrete time variable.rda")
 summary(n4_vr)
-
 #I feel VERY uncomfortable using this model though. This isn't by any means the
 #best model and the parameterization is shite. I wonder if it might be better to
-#use the best model  #################
+#use the best model  
+
+summary(n3)
+saveRDS(n3, "Best MARK Results for Vital Rates Nestlings Analysis.rda" )
+
+bestNestlingModels <- collect.models(lx= c("n13", "n18"))
+avNestling <- model.average(bestNestlingModels) #let's model average the models with delta AIC less than 5, and take numbers from that!
+saveRDS(avNestling, "Model averaging for best nestling models when capture allowed to vary with age.rda")
+avNestling[1,] #that's the estimate of recruitment I believe. 
+
+
+#I wonder if it makes more sense to use the best model. The estimate is
+#better and it makes sense. If there is no evidence that we actually see
+#recruitment varying with time, why should I include that in my population
+#projection matrix? I'm still leary of this though because recruitment DOES vary with time, you just have to treat time as continuous....
