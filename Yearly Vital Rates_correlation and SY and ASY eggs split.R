@@ -49,9 +49,14 @@ eigenUnOrdered <- function (x, symmetric, only.values = FALSE, EISPACK = FALSE)
 PopData<- read.csv(file= "file:///C:/Users/Amelia/Documents/Masters Thesis Project/TRES Data Analysis/Matrix Pop Estimates/Yearly Vital Rates.csv", na.strings=c(""), as.is=T)
 nestlingMark <- readRDS( "Best MARK Results for Vital Rates Nestlings Analysis with discrete time variable.rda")
 summary <- summary(nestlingMark)
-PopData$recruitment <- c(summary$reals$Phi$`Group:ageHY.sexU`[[1]][1,], NA) #doesn't matter which sex you choose because that wasn't allowed to change the survival (not enough data)
+
+
+
+
+ PopData$recruitment<- c(summary$reals$Phi[[1]][[1]][1,], NA)
+
 #there are a number of years that weren't parameterized properly-- you can tell because it's set to 1
-#remove those
+#remove thos THIS IS ONE OF THE PROBLEMS IN OUR DATA THAT I WOULD PREFER TO HAVE DEALT WITH
 PopData$recruitment[which(PopData$recruitment>0.98)]<- NA
 
 FemaleMark <- readRDS("Best MARK Results for Vital Rates Adults Analysis.rda")
@@ -61,10 +66,14 @@ for(i in 1:42){
   PopData$SYReturn[i] <- summaryF$reals$Phi$`Group:age1`[[1]][i,i]
 }
 #remove 1975 from both of these columns-- it's set to 1 for both the SY and ASY
-#but so few birds were banded it's a terrible estimate
+#but so few birds were banded it's a terrible estimate. Also take out 2017 because we don't know whether 2017 returned or not
 PopData$SYReturn[1]<- NA
+PopData$SYReturn[nrow(PopData)]<- NA
+
 PopData$ASYReturn <- c(summaryF$reals$Phi$`Group:age2`[[1]][1,], NA)
 PopData$ASYReturn[1]<- NA
+PopData$ASYReturn[nrow(PopData)]<- NA
+
 
 #Calculate parameters necessary later
 recruitmentParameters <- estBetaParams(mu=mean(PopData$recruitment, na.rm=T), var=var(PopData$recruitment, na.rm=T))
@@ -93,7 +102,7 @@ betaClutchSizeParametersASY <- estBetaParams(mu=(mean(PopData$clutchSizeASY, na.
 #Follow directions in Morris and Doak 2002 Quantitative Conservation Biology pg 284 
 
 #1. get the correlation matrix of all the vital rates (not inluding the year!)
-c <- cor(PopData[,c(3, 4, 6, 7, 9, 10, 12, 13, 14, 15, 16)], method = "spearman", use="complete.obs")
+c <- cor(PopData[,c(3, 4, 6, 7, 9, 10, 12, 13, 14, 15, 16)], method = "spearman", use="na.or.complete")
 
 #2. make a matrix (W) who's columns are all the possible right eigenvectors of C
 eigC <- eigenUnOrdered(c)

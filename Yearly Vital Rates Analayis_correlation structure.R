@@ -47,14 +47,14 @@ eigenUnOrdered <- function (x, symmetric, only.values = FALSE, EISPACK = FALSE)
 #Read in the data, including all the different types of data from RMark
 PopData<- read.csv(file= "file:///C:/Users/Amelia/Documents/Masters Thesis Project/TRES Data Analysis/Matrix Pop Estimates/Yearly Vital Rates.csv", na.strings=c(""), as.is=T)
 #Need to get rid of all the columns that are specific to SY or ASY
-removeCol <- substring(colnames(PopData), nchar(colnames(PopData))-1, nchar(colnames(PopData)))
-
-PopData <- PopData[, which(removeCol !="SY")]
+PopData <- PopData[, -c(6, 7, 9, 10, 12, 13)]
   
   
 nestlingMark <- readRDS( "Best MARK Results for Vital Rates Nestlings Analysis with discrete time variable.rda")
 summary <- summary(nestlingMark)
-PopData$recruitment <- c(summary$reals$Phi$`Group:ageHY.sexU`[[1]][1,], NA) #doesn't matter which sex you choose because that wasn't allowed to change the survival (not enough data)
+
+PopData$recruitment<- c(summary$reals$Phi[[1]][[1]][1,], NA)
+
 #there are a number of years that weren't parameterized properly-- you can tell because it's set to 1
 #remove those
 PopData$recruitment[which(PopData$recruitment>0.98)]<- NA
@@ -77,14 +77,20 @@ SYReturnParameters<- estBetaParams(mu=mean(PopData$SYReturn, na.rm=T ), var=var(
 ASYReturnParameters<- estBetaParams(mu=mean(PopData$ASYReturn, na.rm=T), var=var(PopData$ASYReturn, na.rm=T))
 fledgeParameters <- estBetaParams(mu=mean(PopData$fledgeRate), var=var(PopData$fledgeRate))
 hatchrateParameters <- estBetaParams(mu=mean(PopData$hatchRate), var=var(PopData$hatchRate))
-averageNestParameters<- estBetaParams(mu=mean(PopData$averageNests-1), var=var(PopData$averageNests-1))
-#clutch size works using a normal distribution
+averageNestParametersSY<- estBetaParams(mu=mean(PopData$averageNestsSY-1, na.rm=T), var=var(PopData$averageNestsSY-1, na.rm=T))
+averageNestParametersASY<- estBetaParams(mu=mean(PopData$averageNestsASY-1), var=var(PopData$averageNestsASY-1))
+betaClutchSizeParametersSY <- estBetaParams(mu=(mean(PopData$clutchSizeSY, na.rm=T)-min(PopData$clutchSizeSY, na.rm=T))/(max(PopData$clutchSizeSY, na.rm=T)-min(PopData$clutchSizeSY, na.rm=T)), 
+                                            var=var(PopData$clutchSizeSY, na.rm=T)/(max(PopData$clutchSizeSY, na.rm=T)-min(PopData$clutchSizeSY, na.rm=T)))
+
+betaClutchSizeParametersASY <- estBetaParams(mu=(mean(PopData$clutchSizeASY, na.rm=T)-min(PopData$clutchSizeASY, na.rm=T))/(max(PopData$clutchSizeASY, na.rm=T)-min(PopData$clutchSizeASY, na.rm=T)), 
+                                             var=var(PopData$clutchSizeASY, na.rm=T)/(max(PopData$clutchSizeASY, na.rm=T)-min(PopData$clutchSizeASY, na.rm=T)))
+
 
 
 #Follow directions in Morris and Doak 2002 Quantitative Conservation Biology pg 284 
 
 #1. get the correlation matrix of all the vital rates (not inluding the year!)
-c <- cor(PopData[,2:ncol(PopData)], method = "spearman", use="complete.obs")
+c <- cor(PopData[,2:ncol(PopData)], method = "spearman", use="na.or.complete")
 
 #2. make a matrix (W) who's columns are all the possible right eigenvectors of C
 eigC <- eigenUnOrdered(c)
@@ -94,17 +100,17 @@ W<- eigC$vectors
 #check to make sure that all eigen values are >=0 first, if less than they are likely artificial and should be changed to 0
 #All of my eigen values are >0 so life is good and we can carry on
 sqrt(abs(eigC$vectors))
-D<- matrix(data=0, nrow=7, ncol=7)
-for (i in 1:7){
+D<- matrix(data=0, nrow=9, ncol=9)
+for (i in 1:9){
   D[i,i]<- eigC$values[i]
   
 }
 
 
 #This is where we need to start looping! and collecting data for the vital rates analysis!
-vrdat <- as.data.frame(matrix(nrow=10000, ncol=9)) 
+vrdat <- as.data.frame(matrix(nrow=10000, ncol=11)) 
 #Doing 10,000 because that's what Taylor et al 2012 did)
-colnames(vrdat)<- c("hatchrate", "fledgerate", "recruitrate", "eggRecruitRate", "clutchSize", "averageNests", "SYReturn", "ASYReturn", "lambda" )
+colnames(vrdat)<- c("hatchrate", "fledgerate", "recruitrate", "eggRecruitRate", "clutchSizeSY", "averageNestsSY","clutchSizeASY", "averageNestsASY", "SYReturn", "ASYReturn", "lambda" )
 stages <- c("egg", "SY", "ASY")
 A <- matrix(0, nrow=3, ncol=3, dimnames = list(stages, stages))
 N0 <- c(0, 16 , 38)
@@ -113,7 +119,7 @@ for (i in 1:nrow(vrdat)){
   
   
   #3. Generate a vector (m) of uncorrelation standard normal variables. 
-  m <- rnorm(n=7, mean=0, sd=1)
+  m <- rnorm(n=9, mean=0, sd=1)
   
   #4. Multiply m by C 1/2 (ie W * D 1/2 * W') to get a set of correlated standard normal variables (y)
   c12<- W%*%sqrt(D)%*% t(W)
@@ -126,12 +132,21 @@ for (i in 1:nrow(vrdat)){
   colnames(c)
   
   #averageNests goes first
-  FaverageNests <- pnorm(y[1], mean=0, sd=1)
-  vrdat$averageNests[i] <- 1+qbeta(FaverageNests, shape1= averageNestParameters$alpha , shape2=averageNestParameters$beta, ncp = 0, lower.tail = TRUE, log.p = FALSE)
+  FaverageNestsSY <- pnorm(y[1], mean=0, sd=1)
+  vrdat$averageNestsSY[i] <- 1+qbeta(FaverageNestsSY, shape1= averageNestParametersSY$alpha , shape2=averageNestParametersSY$beta, ncp = 0, lower.tail = TRUE, log.p = FALSE)
+  FaverageNestsASY <- pnorm(y[2], mean=0, sd=1)
+  vrdat$averageNestsASY[i] <- 1+qbeta(FaverageNestsASY, shape1= averageNestParametersASY$alpha , shape2=averageNestParametersASY$beta, ncp = 0, lower.tail = TRUE, log.p = FALSE)
   
-  #clutchSize 
-  FClutchSize <- pnorm(y[2], mean=0, sd=1)
-  vrdat$clutchSize[i] <- qnorm(FClutchSize, mean=mean(PopData$clutchSize), sd=sd(PopData$clutchSize))
+  #clutchSizes 
+  FClutchSizeSY <- pnorm(y[3], mean=0, sd=1)
+  betavalSY <- qbeta(FClutchSizeSY, shape1= betaClutchSizeParametersSY$alpha , shape2=betaClutchSizeParametersSY$beta, ncp = 0, lower.tail = TRUE, log.p = FALSE)
+  
+  vrdat$clutchSizeSY[i]<- betavalSY*(max(PopData$clutchSizeSY, na.rm=T)-min(PopData$clutchSizeSY, na.rm=T))+min(PopData$clutchSizeSY, na.rm=T) #as per morris and doak pg 283
+  
+  FClutchSizeASY <- pnorm(y[4], mean=0, sd=1)
+  betavalASY <- qbeta(FClutchSizeASY, shape1= betaClutchSizeParametersASY$alpha , shape2=betaClutchSizeParametersASY$beta, ncp = 0, lower.tail = TRUE, log.p = FALSE)
+  
+  vrdat$clutchSizeASY[i]<- betavalASY*(max(PopData$clutchSizeASY, na.rm=T)-min(PopData$clutchSizeASY, na.rm=T))+min(PopData$clutchSizeASY, na.rm=T) #as per morris and doak pg 283
   
   #hatchRate 
   FHatchRate <- pnorm(y[3], mean=0, sd=1)
@@ -156,15 +171,17 @@ for (i in 1:nrow(vrdat)){
   #Phew I think we've now generated correlated data!! That's so great. 
   
   
-  vrdat$layrate[i]<- vrdat$clutchSize[i]*vrdat$averageNests[i]
+  vrdat$layrateSY[i]<- vrdat$clutchSizeSY[i]*vrdat$averageNestsASY[i]
+  vrdat$layrateASY[i]<- vrdat$clutchSizeASY[i]*vrdat$averageNestsASY[i]
+  
   vrdat$eggRecruitRate[i] <- vrdat$hatchrate[i] * vrdat$fledgerate[i] * vrdat$recruitrate[i]
   
   
   #Put those vital rates into the matrix
   #Rows= what stage the birds are in now
   #Columns=what stage the birds are going to
-  A[1, 2] <- vrdat$layrate[i] 
-  A[1, 3] <- vrdat$layrate [i]
+  A[1, 2] <- vrdat$layrateSY[i] 
+  A[1, 3] <- vrdat$layrateASY [i]
   A[2, 1] <- vrdat$eggRecruitRate[i]
   A[3, 2] <- vrdat$SYReturn[i]
   A[3, 3] <- vrdat$ASYReturn[i]
@@ -288,3 +305,48 @@ ggplot()+
   annotate("text",x=modFledge_elasticity$coefficients[2], y=sumFledge_e$adj.r.squared+.025, label="Fledge Rate" )+
   theme_classic()
 
+
+
+
+
+histFledgeRate <- ggplot(data=PopData, aes(x=fledgeRate))+
+  geom_histogram( aes(y=..density.., fill=..count..), bins=10, fill="blue", color="black")+
+  stat_function(fun=dbeta, args=list(shape1=fledgeParameters$alpha, shape2=fledgeParameters$beta), size=1.5)+
+  xlab("Population Fledge Rate")+
+  ylab("Density")+
+  theme_classic(base_size = 20)+
+  theme(axis.title.y=element_text(angle=0, vjust=0.5))
+
+
+jpeg(filename = "Histogram of Fledge Rate.jpeg", 
+     width=600, height=450)
+histFledgeRate
+dev.off()
+
+
+
+ASYReturnHist <-  ggplot(data=PopData, aes(x=ASYReturn))+
+  geom_histogram( aes(y=..density.., fill=..count..), bins=15, fill="red", color="black")+
+  stat_function(fun=dbeta, args=list(shape1=ASYReturnParameters$alpha, shape2=ASYReturnParameters$beta), size=1.5)+
+  xlab("Yearly ASY Return Rate")+
+  ylab("Density")+
+  theme_classic(base_size = 20)+
+  theme(axis.title.y=element_text(angle=0, vjust=0.5))
+ 
+SYReturnHist <-  ggplot(data=PopData, aes(x=SYReturn))+
+   geom_histogram( aes(y=..density.., fill=..count..), bins=15, fill="blue", color="black")+
+   stat_function(fun=dbeta, args=list(shape1=SYReturnParameters$alpha, shape2=SYReturnParameters$beta), size=1.5)+
+   xlab("Yearly SY Return Rate")+
+   ylab("Density")+
+   theme_classic(base_size = 20)+
+   theme(axis.title.y=element_text(angle=0, vjust=0.5)) 
+ 
+jpeg(filename = "Histogram of SY Return.jpeg", 
+     width=600, height=300)
+SYReturnHist
+dev.off()
+
+jpeg(filename = "Histogram of ASY Return.jpeg", 
+     width=600, height=300)
+ASYReturnHist
+dev.off()
